@@ -1,0 +1,31 @@
+TASK com.magicinstall.phone.order_z id=134
+  ACTIVITY com.magicinstall.phone.order_z/.MainActivity 41bbdb50 pid=6026
+    Local FragmentActivity 418c45c0 State:
+      mCreated=truemResumed=false mStopped=true mReallyStopped=true
+      mLoadersStarted=true
+    FragmentManager misc state:
+      mHost=android.support.v4.app.FragmentActivity$HostCallbacks@418c5430
+      mContainer=android.support.v4.app.FragmentActivity$HostCallbacks@418c5430
+      mCurState=2 mStateSaved=true mDestroyed=false
+    View Hierarchy:
+      com.android.internal.policy.impl.PhoneWindow$DecorView{418d27a0 V.E..... ... 0,0-0,0}
+        android.widget.LinearLayout{418d3078 V.E..... ... 0,0-0,0}
+          android.view.ViewStub{418d7278 G.E..... ... 0,0-0,0 #1020322}
+          android.widget.FrameLayout{418d7630 V.E..... ... 0,0-0,0}
+            android.support.v7.widget.FitWindowsLinearLayout{418d21d8 V.E..... ... 0,0-0,0 #7f0e0055 app:id/action_bar_root}
+              android.support.v7.widget.ViewStubCompat{418d7f80 G.E..... ... 0,0-0,0 #7f0e0056 app:id/action_mode_bar_stub}
+              android.support.v7.widget.ContentFrameLayout{418ad4c0 V.ED.... ... 0,0-0,0 #1020002 android:id/content}
+                android.support.design.widget.CoordinatorLayout{4189b948 V.E..... ... 0,0-0,0}
+                  android.support.design.widget.AppBarLayout{418bc8b0 V.E..... ... 0,0-0,0 #7f0e0072 app:id/app_bar}
+                    android.support.design.widget.CollapsingToolbarLayout{418befa8 V.ED.... ... 0,0-0,0 #7f0e0073 app:id/toolbar_layout}
+                      android.support.v7.widget.Toolbar{418a4270 V.E..... ... 0,0-0,0 #7f0e0074 app:id/toolbar}
+                        android.widget.RelativeLayout{418a53d8 V.E..... ... 0,0-0,0}
+                          android.widget.Switch{418d56b0 VFED..C. F.. 0,0-0,0 #7f0e0075 app:id/switch1}
+                          android.support.v7.widget.AppCompatImageView{4187ba70 V.ED..C. ... 0,0-0,0 #7f0e0076 app:id/setting_btn}
+                          android.support.v7.widget.AppCompatImageButton{418b3a08 VFED..C. ... 0,0-0,0 #7f0e0077 app:id/imageButton}
+                        android.widget.TextView{418f7040 V.ED.... ... 0,0-0,0}
+                        android.view.View{4189d1d8 V.ED.... ... 0,0-0,0}
+                        android.support.v7.widget.ActionMenuView{418a01b0 V.E..... ... 0,0-0,0}
+                  android.support.v4.widget.NestedScrollView{418a8500 VFED.... ... 0,0-0,0}
+                    android.support.v7.widget.AppCompatTextView{41886c08 V.ED.... ... 0,0-0,0}
+                  android.support.design.widget.FloatingActionButton{418ebad0 GFED..C. ... 72,72-72,72 #7f0e0078 app:id/fab}

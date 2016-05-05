@@ -1,0 +1,30 @@
+<preference-headers xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- These settings headers are only used on tablets. -->
+
+    <header
+        android:fragment="com.magicinstall.phone.order_z.SettingsActivity$UserPreferenceFragment"
+        android:icon="@android:drawable/ic_menu_myplaces"
+        android:title="@string/pref_title_user" />
+
+    <header
+        android:fragment="com.magicinstall.phone.order_z.SettingsActivity$NotificationPreferenceFragment"
+        android:icon="@drawable/ic_notifications_black_24dp"
+        android:title="@string/pref_title_notifications" />
+
+    <header
+        android:fragment="com.magicinstall.phone.order_z.SettingsActivity$ServerPreferenceFragment"
+        android:icon="@android:drawable/ic_menu_send"
+        android:title="@string/pref_title_server" />
+
+    <header
+        android:fragment="com.magicinstall.phone.order_z.SettingsActivity$DataSyncPreferenceFragment"
+        android:icon="@drawable/ic_sync_black_24dp"
+        android:title="@string/pref_header_data_sync" />
+
+    <header
+        android:fragment="com.magicinstall.phone.order_z.SettingsActivity$AboutPreferenceFragment"
+        android:icon="@drawable/ic_info_black_24dp"
+        android:title="@string/pref_title_about" />
+
+</preference-headers>

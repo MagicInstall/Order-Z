@@ -1,0 +1,36 @@
+Applications Memory Usage (kB):
+Uptime: 229116780 Realtime: 486443956
+
+** MEMINFO in pid 6026 [com.magicinstall.phone.order_z] **
+                         Shared  Private     Heap     Heap     Heap
+                   Pss    Dirty    Dirty     Size    Alloc     Free
+                ------   ------   ------   ------   ------   ------
+       Native        0        0        0     2708     2707        0
+       Dalvik     3031    11988     2596    10371     8848     1523
+       Cursor        0        0        0                           
+       Ashmem        0        0        0                           
+    Other dev     3245     2508     2180                           
+     .so mmap     1168     2844      664                           
+    .jar mmap        0        0        0                           
+    .apk mmap      132        0        0                           
+    .ttf mmap      109        0        0                           
+    .dex mmap     1764        0       88                           
+   Other mmap      513      440       80                           
+      Unknown     1497      452     1484                           
+        TOTAL    11459    18232     7092    13079    11555     1523
+ 
+ Objects
+               Views:       23         ViewRootImpl:        1
+         AppContexts:        2           Activities:        1
+              Assets:        4        AssetManagers:        4
+       Local Binders:        5        Proxy Binders:       10
+    Death Recipients:        0
+     OpenSSL Sockets:        0
+ 
+ SQL
+         MEMORY_USED:       83
+  PAGECACHE_OVERFLOW:       12          MALLOC_SIZE:       62
+ 
+ DATABASES
+      pgsz     dbsz   Lookaside(b)          cache  Dbname
+         4       20             20         0/15/1  /data/data/com.magicinstall.phone.order_z/databases/database

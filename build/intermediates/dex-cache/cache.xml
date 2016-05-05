@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<items version="2" >
+
+    <item
+        jar="/Volumes/Data HD/Documents/Android Projects/Order-Z/app/build/intermediates/incremental-classes/debug/instant-run-bootstrap.jar"
+        jumboMode="true"
+        revision="23.0.2"
+        sha1="5a1f182ad1a7dfcbfa85a80adec0e620bf7ce89e">
+        <dex dex="/Volumes/Data HD/Documents/Android Projects/Order-Z/app/build/intermediates/pre-dexed/debug/instant-run-bootstrap_afc44e8889c0be7e6de4d61df415052a6e912c95.jar" />
+    </item>
+
+</items>

@@ -1,0 +1,8 @@
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <com.magicinstall.phone.order_z.ServerPreference
+        android:key="server_state">
+        <intent android:action="android.intent.action.VIEW"></intent>
+    </com.magicinstall.phone.order_z.ServerPreference>
+
+</PreferenceScreen>
