@@ -17,7 +17,7 @@ public class MainActivity extends ActivityManagerApplication.ManagedActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         Log.i(TAG, "onCreate");
-//        if (!WifiUDP.checkUser("", "")) {
+//        if (!LanAutoSearch.checkUser("", "")) {
 //            gotoLoginActivity();
 //        }
         super.onCreate(savedInstanceState);
@@ -67,7 +67,7 @@ public class MainActivity extends ActivityManagerApplication.ManagedActivity {
     @Override
     protected void onStart() {
         Log.i(TAG, "onStart");
-//        if (WifiUDP.checkUser("", "")) {
+//        if (LanAutoSearch.checkUser("", "")) {
 //            gotoLoginActivity();
 //        }
         super.onStart();
@@ -76,7 +76,7 @@ public class MainActivity extends ActivityManagerApplication.ManagedActivity {
     @Override
     protected void onResume() {
         Log.i(TAG, "onResume");
-//        if (!WifiUDP.checkUser("", "")) {
+//        if (!LanAutoSearch.checkUser("", "")) {
 //            gotoLoginActivity();
 //        }
 

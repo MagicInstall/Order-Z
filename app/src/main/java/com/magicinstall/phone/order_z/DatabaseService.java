@@ -13,7 +13,7 @@ public class DatabaseService extends Service {
     private static final int UDP_BROADCAST_PORT = 13130;
 
     private MainDatabase mDatabase;
-    private WifiUDP mWifiUDP;
+    private LanAutoSearch mLanSearcher;
 
     public DatabaseService() {
     }
@@ -25,8 +25,8 @@ public class DatabaseService extends Service {
         mDatabase = new MainDatabase(this);
         mDatabase.Backup(null);
 
-//        mWifiUDP = new WifiUDP();
-//        mWifiUDP.serverWaitClientAndSendIP(this, UDP_BROADCAST_PORT);
+//        mLanSearcher = new LanAutoSearch();
+//        mLanSearcher.startServer(this, UDP_BROADCAST_PORT);
     }
 
     @Override

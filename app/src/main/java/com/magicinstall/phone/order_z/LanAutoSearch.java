@@ -17,12 +17,12 @@ import java.net.UnknownHostException;
 
 /**
  * 哩个类主要用于内网客户端自动发现服务端
- * <
+ * <p>
  *
  * Created by wing on 16/4/24.
  */
-public class WifiUDP {
-    private static final String TAG = "WifiUDP";
+public class LanAutoSearch {
+    private static final String TAG = "LanAutoSearch";
 
 //    private static final String mGroupIP = "224.0.0.1"; // 多播地址;
 
@@ -36,7 +36,7 @@ public class WifiUDP {
      * @param context
      * @throws UnknownHostException
      */
-    public WifiUDP(Context context, String groupIP) throws UnknownHostException {
+    public LanAutoSearch(Context context, String groupIP) throws UnknownHostException {
         mGroupAddress = InetAddress.getByName(groupIP);
 
         mContext = context;
@@ -59,16 +59,6 @@ public class WifiUDP {
         return mBroadcastTTL;
     }
 
-    private boolean mListening = false;
-    /**
-     * 中止接收线程的循环体
-     * <p>哩个方法只系中止while 循环, 并不能中止receive 的阻塞,
-     * @see .setTimeout
-     */
-    public void stopReceive() {
-        mListening = true;
-        // 由线程负责退出广播组, 同埋将Socket 引用变null
-    }
 
     private int mTimeout = 1000; // 默认1秒
     /**
@@ -103,6 +93,19 @@ public class WifiUDP {
         return strArr[1];
     }
 
+    private int mReceiveBuffferLength = 1024; // 默认值
+    /**
+     * 设置监听缓冲区大小
+     * @param length
+     */
+    public void setReceiveBuffferLength(int length) {
+        mReceiveBuffferLength = length;
+    }
+    /** @see .setReceiveBuffferLength */
+    public int getReceiveBuffferLength() {
+        return mReceiveBuffferLength;
+    }
+
 
 //    private int mPort = 23333; //默认值
 //    /**
@@ -120,45 +123,50 @@ public class WifiUDP {
 //        return mPort;
 //    }
 
+    /************************************************************************
+     *                             作为服务端                                *
+     ************************************************************************/
+
     /**
      * [作为服务端]
      * 通过监听UDP 广播, 发现客户端的连接请求,
      * 并向客户端发出本机IP;
-     * <p>哩个方法会在另一个线程while 循环, 如要中止, 就要调用{@Link }
+     * <p>哩个方法会在另一个线程while 循环, 如要中止, 就要调用{@Link stop()}方法.
+     * <p>如果无连接内网, 将返回false.
      * @param broadcastPort 等待客户端广播探测包的端口号 0 - 65535
      * @param unicastPort 向客户发送本机IP的端口号 0 - 65535
      * @return true: 运行过程顺利(不包括收发过程), false: 应该提醒用户确认Wifi 状态!
      */
-    public boolean serverWaitClientAndSendIP(int broadcastPort, int unicastPort){
+    public boolean startServer(int broadcastPort, int unicastPort){
         if (mListening) return false;
 
         // 初始化socket
         if (!initSocket(broadcastPort, unicastPort)) return false;
 
         // 开始监听广播
-        return serverStartListenUDP(broadcastPort, unicastPort);
+        return serverStartListenUDP(/*broadcastPort,*/ unicastPort);
     }
 
     /**
-     * {@Link serverWaitClientAndSendIP} 方法专用Part1,
+     * {@Link startServer} 方法专用Part1,
      * 太长无办法...
      *
      * <p>打开新线程开始监听连接请求
      *
-     * @param broadcastPort 广播端口号,
-     *                      哩度冇用到, 初始化嗰时已经设置好广播端口
-     * @param unicastPort 单播端口号
+//     * @param broadcastPort 广播端口号,
+//     *                      哩度冇用到, 初始化嗰时已经设置好广播端口
+     * @param replyPort 单播回复客户端端口号
      * @return true: 运行过程顺利(不包括收发过程)
      */
-    private boolean serverStartListenUDP(int broadcastPort, final int unicastPort) {
+    private boolean serverStartListenUDP(/*int broadcastPort,*/ final int replyPort) {
         new Thread(){
             @Override
             public void run() {
                 mListening = true;
 
-                byte receive_bufffer[] = new byte[003]; // TODO: 试验buffer 嘅长度
-                final DatagramPacket receive_packet = new DatagramPacket(
-                        receive_bufffer, receive_bufffer.length); //, mGroupAddress, port);
+                byte[] receive_buffer = new byte[mReceiveBuffferLength];
+                DatagramPacket receive_packet = new DatagramPacket(
+                        receive_buffer, receive_buffer.length); //, mGroupAddress, port);
 
                 String Client_ip;
 
@@ -171,20 +179,32 @@ public class WifiUDP {
                     catch (InterruptedIOException e) {
                         Log.v(TAG, "Server listener timeout");
                         continue;
-                    }
-                    // 收到的包有问题就会抛出哩个异常
-                    catch (IOException e) {
-                        e.printStackTrace();
-//                        mListening = false; // 令循环结束
+                    } catch (IOException e) {
+                        Log.e(TAG, "Server收到的报文有问题");
                         continue;
                     }
-                    serverGotClientPacketAndSend(receive_packet, unicastPort);
+
+                    // 复制收到的报文, 不然会出现线程问题
+                    byte[] source_data = receive_packet.getData();
+                    byte[] copied_data = new byte[receive_packet.getLength()];
+                    System.arraycopy(source_data, 0, copied_data, 0 , source_data.length);
+                    DatagramPacket copied_packet = new DatagramPacket(
+                            copied_data,
+                            receive_packet.getOffset(),
+                            receive_packet.getLength(),
+                            new InetAddress(receive_packet.getAddress()), // TODO: 研究序列化Serializable接口点样copy
+                            receive_packet.getPort()
+                    );
+
+                    serverGotClientPacketAndSend(copied_packet, replyPort);
+
+
 //                    Client_ip = new String(
 //                            receive_bufffer,
 //                            receive_packet.getOffset(),
-//                            receive_packet.getLength()); // TODO: 改成解密
+//                            receive_packet.getLength());
 //
-//                    // TODO: 判断报文内容的有效性
+//                    // 判断报文内容的有效性
 //
 //                    Log.i(TAG, "Server got packet" +
 //                            "(addr:" + receive_packet.getAddress().toString() +
@@ -220,9 +240,8 @@ public class WifiUDP {
         return true;
     }
 
-
     /**
-     * {@Link serverWaitClientAndSendIP} 方法专用Part1,
+     * {@Link startServer} 方法专用Part1,
      * 太长无办法...
      *
      * <p>打开新线程解包, 防止监听线程阻塞
@@ -234,28 +253,64 @@ public class WifiUDP {
         new Thread(){
             @Override
             public void run() {
-                String i = new String(
-                        packet.getData(),
-                        packet.getOffset(),
-                        packet.getLength()); // TODO: 改成解密
-
-                // TODO: 判断报文内容的有效性
-
-                Log.i(TAG, "Server got packet" +
-                        "(addr:" + packet.getAddress().toString() +
-                        " port:" + packet.getPort() +
-                        " len:" + packet.getLength() +
-                        " off:" +  packet.getOffset() + ")" +
-                        ":" + i + "(" + i.length() + "bytes)");
-
-                // 新线程 发送本机地址, 随后客户端将会使用哩个地址向本机发起TCP连接
                 String local_ip = getWifiIpAddress();
                 if (local_ip == null) return;
-                byte send_bufffer[] = "Yeah!".getBytes();
 
+                // 触发事件取得要回复的数据
+                byte send_bufffer[] = willReplyClient(packet, local_ip);
+
+                // 新线程 发送本机地址, 随后客户端将会使用哩个地址向本机发起TCP连接
                 send(mDatagramSocket, send_bufffer, packet.getAddress(), unicastPort);
             }
         }.start();
+    }
+
+    /**
+     * 服务端准备回复的事件
+     * <p>为防止被攻击, 应该验证一下客户端发嚟的内容.
+     * @param clientPacket 从客户端收到的报文,
+     *                     可以从中取得客户端发过来的探测包内容,
+     *                     然后根据内容作出回复.
+     * @param lanLocalIp 服务器的内网IP
+     * @return 返回一段数据用于回复客户端的数据,
+     *         哩个返回数据必须将本机IP 包含其中,
+     *         客户端将根据哩个IP,
+     *         以TCP 重新发起连接.
+     */
+    public byte[] willReplyClient(DatagramPacket clientPacket, String lanLocalIp) {
+        // 打印测试
+        String info = new String(
+                clientPacket.getData(),
+                clientPacket.getOffset(),
+                clientPacket.getLength()); // TODO: 改成解密
+
+        // TODO: 判断报文内容的有效性
+
+        Log.i(TAG, "Server got packet" +
+                "(addr:" + clientPacket.getAddress().toString() +
+                " port:" + clientPacket.getPort() +
+                " len:" + clientPacket.getLength() +
+                " off:" +  clientPacket.getOffset() + ")" +
+                ":" + info);
+
+        return "This's server".getBytes();
+    }
+
+
+
+    /************************************************************************
+     *                             作为客户端                                *
+     ************************************************************************/
+
+    /**
+     * 客户端在准备广播通知在线服务器的事件
+     * <p>哩个事件不在主线程执行!
+     * @return 返回一段数据用于发给服务端的数据,
+     *         该数据返回null 将会导致广播中止,
+     *         正常情况应该用{@Link stop()} 方法中止广播.
+     */
+    public byte[] willCallServer() {
+        return "Hi, This's Client!".getBytes();
     }
 
 
@@ -268,14 +323,14 @@ public class WifiUDP {
      * @param interval 设置发送探测包的时间间隔
      * @return true: 运行过程顺利(不包括收发过程), false: 应该提醒用户确认Wifi 状态!
      */
-    public boolean getAndConnetionServers(int broadcastPort, int unicastPort, int interval){
+    public boolean startClient(int broadcastPort, int unicastPort, int interval){
         if (mListening) return false;
 
         // 初始化socket
         if (!initSocket(broadcastPort, unicastPort)) return false;
 
         // 在新线程等待Server 送来IP
-        if (!clientStartListenUDP(unicastPort)) return false;
+        if (!clientStartListenUDP(/*unicastPort*/)) return false;
 
 
         // 在新线程广播探测包
@@ -288,16 +343,16 @@ public class WifiUDP {
 
     /**
      * Client监听广播
-     * @param unicastPort 单播端口号 0 - 65535
+//     * @param receivePort 单播监听端口号 0 - 65535
      * @return
      */
-    private boolean clientStartListenUDP(final int unicastPort) {
+    private boolean clientStartListenUDP(/*final int receivePort*/) {
         new Thread(){
             @Override
             public void run() {
                 mListening = true;
 
-                byte receive_bufffer[] = new byte[003]; // TODO: 试验buffer 嘅长度
+                byte receive_bufffer[] = new byte[mReceiveBuffferLength];
                 final DatagramPacket receive_packet = new DatagramPacket(
                         receive_bufffer, receive_bufffer.length); //, mGroupAddress, port);
 
@@ -332,7 +387,7 @@ public class WifiUDP {
                             " port:" + receive_packet.getPort() +
                             " len:" + receive_packet.getLength() +
                             " off:" +  receive_packet.getOffset() + ")" +
-                            ":" + Client_ip + "(" + Client_ip.length() + "bytes)");
+                            ":" + Client_ip);
 
                     // TODO: 解密
                     // TODO: 判断报文内容的有效性
@@ -371,7 +426,7 @@ public class WifiUDP {
     }
 
     /**
-     * @Link getAndConnetionServers 方法专用Part2,
+     * @Link startClient 方法专用Part2,
      * 太长无办法...
      *
      * 发起UDP广播通知服务端
@@ -382,18 +437,23 @@ public class WifiUDP {
         new Thread(){
             @Override
             public void run() {
-                // TODO:
-                byte[] data = ("Hello!").getBytes();
+                // 触发事件取得要广播的数据
+                byte data[] = willCallServer();
 
-                while (mListening) {
-                    send(mMulticastSocket, data, broadcastPort);
+                if (data == null)
+                    Log.e(TAG, "willCallServer return null, 广播不会执行");
+                    // 跳过下边循环体
 
-                    try {
-                        sleep(interval);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
+                else
+                    while (mListening) {
+                        send(mMulticastSocket, data, broadcastPort);
+
+                        try {
+                            sleep(interval);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
                     }
-                }
 
                 // 退出广播组
                 if (mMulticastSocket != null) {
@@ -459,6 +519,23 @@ public class WifiUDP {
         return true;
     }
 
+
+
+    /************************************************************************
+     *                         服务端客户端共用方法                            *
+     ************************************************************************/
+
+    private boolean mListening = false;
+    /**
+     * 中止接收线程的循环体
+     * <p>哩个方法只系中止while 循环, 并不能中止receive 的阻塞,
+     * @see .setTimeout
+     */
+    public void stop() {
+        mListening = true;
+        // 由线程负责退出广播组, 同埋将Socket 引用变null
+    }
+
     /**
      * 发送多播报文
      * @param socket
@@ -490,7 +567,7 @@ public class WifiUDP {
 
                 try {
                     socket.send(send_packet);
-                    Log.d(TAG, "Packet has been sent");
+                    Log.d(TAG, "Packet has been sent:" + send_len + "bytes");
                 }
                 // send 会引起哩个异常
                 catch (IOException e) {
@@ -544,72 +621,72 @@ public class WifiUDP {
 
 
 
-    //客户端发送数据实现：
-    protected void connectServerWithUDPSocket() {
-
-        try {
-            //创建DatagramSocket对象并指定一个端口号，注意，如果客户端需要接收服务器的返回数据,
-            //还需要使用这个端口号来receive，所以一定要记住
-            mDatagramSocket = new DatagramSocket(1985);
-            //使用InetAddress(Inet4Address).getByName把IP地址转换为网络地址
-            InetAddress serverAddress = InetAddress.getByName("192.168.1.32");
-            //Inet4Address serverAddress = (Inet4Address) Inet4Address.getByName("192.168.1.32");
-            String str = "[2143213;21343fjks;213]";//设置要发送的报文
-            byte data[] = str.getBytes();//把字符串str字符串转换为字节数组
-            //创建一个DatagramPacket对象，用于发送数据。
-            //参数一：要发送的数据  参数二：数据的长度  参数三：服务端的网络地址  参数四：服务器端端口号
-            DatagramPacket packet = new DatagramPacket(data, data.length ,serverAddress ,10025);
-            mDatagramSocket.send(packet);//把数据发送到服务端。
-        } catch (SocketException e) {
-            e.printStackTrace();
-        } catch (UnknownHostException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    //客户端接收服务器返回的数据：
-    public void ReceiveServerSocketData() {
-        DatagramSocket socket;
-        try {
-            //实例化的端口号要和发送时的socket一致，否则收不到data
-            socket = new DatagramSocket(1985);
-            byte data[] = new byte[4 * 1024];
-            //参数一:要接受的data 参数二：data的长度
-            DatagramPacket packet = new DatagramPacket(data, data.length);
-            socket.receive(packet);
-            //把接收到的data转换为String字符串
-            String result = new String(packet.getData(), packet.getOffset(),
-                    packet.getLength());
-            socket.close();//不使用了记得要关闭
-            System.out.println("the number of reveived Socket is  :" + "udpData:" + result);
-        } catch (SocketException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    // 服务器接收客户端实现：
-    public void ServerReceviedByUdp(){
-        //创建一个DatagramSocket对象，并指定监听端口。（UDP使用DatagramSocket）
-        DatagramSocket socket;
-        try {
-            socket = new DatagramSocket(10025);
-            //创建一个byte类型的数组，用于存放接收到得数据
-            byte data[] = new byte[4*1024];
-            //创建一个DatagramPacket对象，并指定DatagramPacket对象的大小
-            DatagramPacket packet = new DatagramPacket(data,data.length);
-            //读取接收到得数据
-            socket.receive(packet);
-            //把客户端发送的数据转换为字符串。
-            //使用三个参数的String方法。参数一：数据包 参数二：起始位置 参数三：数据包长
-            String result = new String(packet.getData(),packet.getOffset() ,packet.getLength());
-        } catch (SocketException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
+//    //客户端发送数据实现：
+//    protected void connectServerWithUDPSocket() {
+//
+//        try {
+//            //创建DatagramSocket对象并指定一个端口号，注意，如果客户端需要接收服务器的返回数据,
+//            //还需要使用这个端口号来receive，所以一定要记住
+//            mDatagramSocket = new DatagramSocket(1985);
+//            //使用InetAddress(Inet4Address).getByName把IP地址转换为网络地址
+//            InetAddress serverAddress = InetAddress.getByName("192.168.1.32");
+//            //Inet4Address serverAddress = (Inet4Address) Inet4Address.getByName("192.168.1.32");
+//            String str = "[2143213;21343fjks;213]";//设置要发送的报文
+//            byte data[] = str.getBytes();//把字符串str字符串转换为字节数组
+//            //创建一个DatagramPacket对象，用于发送数据。
+//            //参数一：要发送的数据  参数二：数据的长度  参数三：服务端的网络地址  参数四：服务器端端口号
+//            DatagramPacket packet = new DatagramPacket(data, data.length ,serverAddress ,10025);
+//            mDatagramSocket.send(packet);//把数据发送到服务端。
+//        } catch (SocketException e) {
+//            e.printStackTrace();
+//        } catch (UnknownHostException e) {
+//            e.printStackTrace();
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
+//    }
+//
+//    //客户端接收服务器返回的数据：
+//    public void ReceiveServerSocketData() {
+//        DatagramSocket socket;
+//        try {
+//            //实例化的端口号要和发送时的socket一致，否则收不到data
+//            socket = new DatagramSocket(1985);
+//            byte data[] = new byte[4 * 1024];
+//            //参数一:要接受的data 参数二：data的长度
+//            DatagramPacket packet = new DatagramPacket(data, data.length);
+//            socket.receive(packet);
+//            //把接收到的data转换为String字符串
+//            String result = new String(packet.getData(), packet.getOffset(),
+//                    packet.getLength());
+//            socket.close();//不使用了记得要关闭
+//            System.out.println("the number of reveived Socket is  :" + "udpData:" + result);
+//        } catch (SocketException e) {
+//            e.printStackTrace();
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
+//    }
+//
+//    // 服务器接收客户端实现：
+//    public void ServerReceviedByUdp(){
+//        //创建一个DatagramSocket对象，并指定监听端口。（UDP使用DatagramSocket）
+//        DatagramSocket socket;
+//        try {
+//            socket = new DatagramSocket(10025);
+//            //创建一个byte类型的数组，用于存放接收到得数据
+//            byte data[] = new byte[4*1024];
+//            //创建一个DatagramPacket对象，并指定DatagramPacket对象的大小
+//            DatagramPacket packet = new DatagramPacket(data,data.length);
+//            //读取接收到得数据
+//            socket.receive(packet);
+//            //把客户端发送的数据转换为字符串。
+//            //使用三个参数的String方法。参数一：数据包 参数二：起始位置 参数三：数据包长
+//            String result = new String(packet.getData(),packet.getOffset() ,packet.getLength());
+//        } catch (SocketException e) {
+//            e.printStackTrace();
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
+//    }
 }

@@ -11,7 +11,6 @@ import android.widget.Button;
 import android.widget.LinearLayout;
 
 import java.net.DatagramPacket;
-import java.net.InetAddress;
 import java.net.UnknownHostException;
 
 /**
@@ -101,9 +100,9 @@ public class ServerPreference extends Preference {
 
     // 客户端
     public void tttsend() {
-        WifiUDP net = null;
+        LanAutoSearch net = null;
         try {
-            net = new WifiUDP(getContext(), "224.0.0.1"){
+            net = new LanAutoSearch(getContext(), "224.0.0.1"){
                 /**
                  * 客户端收到一个服务端的应答的事件
                  * <p>哩个事件已经被放入主线程运行
@@ -119,15 +118,15 @@ public class ServerPreference extends Preference {
             e.printStackTrace();
             return;
         }
-        boolean s = net.getAndConnetionServers(13130, 13139, 5000);
+        boolean s = net.startClient(13130, 13139, 5000);
         Log.i(TAG, "send ");
     }
 
     // 服务端
     public void tttreceive() {
-        WifiUDP net = null;
+        LanAutoSearch net = null;
         try {
-            net = new WifiUDP(getContext(), "224.0.0.1") {
+            net = new LanAutoSearch(getContext(), "224.0.0.1") {
                 /**
                  * 客户端收到一个服务端的应答的事件
                  * <p>哩个事件已经被放入主线程运行
@@ -138,12 +137,14 @@ public class ServerPreference extends Preference {
                 public void onFoundServer(DatagramPacket packet) {
 
                 }
+
+
             };
         } catch (UnknownHostException e) {
             e.printStackTrace();
             return;
         }
-        boolean s = net.serverWaitClientAndSendIP(13130, 13139);
+        boolean s = net.startServer(13130, 13139);
         Log.i(TAG, "receive");
     }
 }

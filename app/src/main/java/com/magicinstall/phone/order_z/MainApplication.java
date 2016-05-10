@@ -12,10 +12,6 @@ import android.os.RemoteException;
 import android.preference.PreferenceManager;
 import android.util.Log;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-
 /**
  * Created by wing on 16/4/25.
  */
@@ -43,7 +39,7 @@ public class MainApplication extends ActivityManagerApplication{
 //        startService(intent);
         bindService(new Intent(this, DatabaseService.class), mServiceConnection, Context.BIND_AUTO_CREATE);
 
-//        Log.i(TAG, new WifiUDP().getWifiIpAddress(this));
+//        Log.i(TAG, new LanAutoSearch().getWifiIpAddress(this));
 
 
 
@@ -63,22 +59,22 @@ public class MainApplication extends ActivityManagerApplication{
 //        Log.d("解出文件MD5", Hash.getMD5(dec_data));
 
 
-        ByteArrayOutputStream out = new ByteArrayOutputStream(1024);
-        try {
-            InputStream stream =
-                    getBaseContext().getResources().openRawResource(R.raw.test_file);
-            byte[] b = new byte[1024];
-            int n;
-            while ((n = stream.read(b)) != -1) {
-                out.write(b, 0, n);
-            }
-            stream.close();
-            out.close();
-        } catch (IOException e) {
-            Log.e(TAG, "文件读取异常"); return;
-        }
-        Log.v("原文件字节:", Hash.bytes2Hex(out.toByteArray()));
-        Log.d("原文件MD5", Hash.getMD5(out.toByteArray()));
+//        ByteArrayOutputStream out = new ByteArrayOutputStream(1024);
+//        try {
+//            InputStream stream =
+//                    getBaseContext().getResources().openRawResource(R.raw.test_file);
+//            byte[] b = new byte[1024];
+//            int n;
+//            while ((n = stream.read(b)) != -1) {
+//                out.write(b, 0, n);
+//            }
+//            stream.close();
+//            out.close();
+//        } catch (IOException e) {
+//            Log.e(TAG, "文件读取异常"); return;
+//        }
+//        Log.v("原文件字节:", Hash.bytes2Hex(out.toByteArray()));
+//        Log.d("原文件MD5", Hash.getMD5(out.toByteArray()));
 
 
 //        RSA rsa = new RSA();
