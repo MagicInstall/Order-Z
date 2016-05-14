@@ -1,9 +1,13 @@
 package com.magicinstall.phone.order_z;
 
+import android.support.annotation.NonNull;
+
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
 /**
+ * 摘要算法
+ * 以及各种类型转换算法
  * Created by wing on 16/4/29.
  */
 public class Hash {
@@ -97,5 +101,47 @@ public class Hash {
      */
     private static byte char2Byte(char c) {
         return (byte) "0123456789ABCDEF".indexOf(c);
+    }
+
+    /**
+     * int 转byte[4]
+     * @param val
+     * @return 小端序
+     */
+    public static byte[] int2byte32(int val) {
+        return new byte[]{
+                (byte)((val >>  0 ) & 0xFF), // 注意个扑街安卓右移系会保留符号位的!
+                (byte)((val >>  8 ) & 0xFF),
+                (byte)((val >> 16 ) & 0xFF),
+                (byte)((val >> 24 ) & 0xFF)
+        };
+    }
+
+    /**
+     * byte[4] 转 int
+     * <p>哩个方法会连续(如果有)读4个字节.
+     * <P>FxxK the Android!!!
+     * @param val
+     * @param offset 在val 中的偏移位置
+     * @return
+     */
+    public static int byte32ToInt(@NonNull byte val[], int offset) {
+        int result = 0;
+        if (val.length > (offset + 3)) {
+            result |= val[offset + 3] & 0xFF;
+            result <<= 8;
+        }
+        if (val.length > (offset + 2)) {
+            result |= val[offset + 2] & 0xFF;
+            result <<= 8;
+        }
+        if (val.length > (offset + 1)) {
+            result |= val[offset + 1] & 0xFF;
+            result <<=  8;
+        }
+        if (val.length > (offset + 0)) {
+            result |= val[offset + 0] & 0xFF;
+        }
+        return result;
     }
 }

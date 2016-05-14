@@ -55,10 +55,10 @@ public class CRC32 {
      * @param length
      * @return
      */
-    private static int _CRC32With8Bit(int result32, byte[] data, int length) {
+    private static int _CRC32With8Bit(int result32, byte[] data, int offset, int length) {
         byte xbit, bits, data_tmp;
 
-        for (int l = 0; l < length; l++) {
+        for (int l = offset; l < length; l++) {
             data_tmp = reversionBit8( data[l]);
 
             xbit = (byte) (1 << 7);
@@ -90,16 +90,20 @@ public class CRC32 {
      * <p>类方法, 直接一次取得CRC32 码,
      * 小型数据可以直接用类方法.
      * @param data
+     * @param offset
      * @param length
      * @return
      * @see #calculateCRC32With8Bit(byte[], int)
      */
-    public static int classCalculateCRC32With8Bit(byte[] data, int length) {
+    public static int classCalculateCRC32With8Bit(byte[] data, int offset, int length) {
         int result32 = 0xFFFFFFFF;
 
-        result32 = _CRC32With8Bit(result32, data, length);
+        result32 = _CRC32With8Bit(result32, data, offset, length);
 
         return reversionBit32(result32) ^ 0xffffffff;
+    }
+    public static int classCalculateCRC32With8Bit(byte[] data, int length) {
+        return classCalculateCRC32With8Bit(data, 0, length);
     }
 
     /************************************************************************
@@ -181,7 +185,7 @@ public class CRC32 {
      *         或者多次执行以后, 调用{@Link getResult32}取得结果.
      */
     public int calculateCRC32With8Bit(byte[] data, int length){
-        _crcResult32 = _CRC32With8Bit(_crcResult32, data, length);
+        _crcResult32 = _CRC32With8Bit(_crcResult32, data, 0, length);
 
         return reversionBit32(_crcResult32) ^ 0xffffffff;
     }
