@@ -1,1 +1,1 @@
-include ':app'
+include ':Client', ':Server', ':library'

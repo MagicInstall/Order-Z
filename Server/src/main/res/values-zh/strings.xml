@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">订单侠企业</string>
+    <!-- 多处共用 -->
+    <string name="txt_delete">删除</string>
+    <string name="txt_company_name">企业名</string>
+
+
+    <string name="db_default_company_name">我的企业</string>
+    <string name="company_delete_note">删除后可以在XXX恢复</string>
+    <string name="txt_company_sub_name">后缀名</string>
+    <string name="txt_personnel_management">人事管理</string>
+    <string name="txt_propdowm_refresh">下拉刷新</string>
+</resources>
