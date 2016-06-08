@@ -3,6 +3,7 @@ package com.magicinstall.service.order_z;
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -17,6 +18,8 @@ public class CompanyInfoActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_company_info);
+        Toolbar toolbar = (Toolbar) findViewById(R.id.Toolbar);
+
 
         // 用传入的ID 判断是新建定系编辑
         Intent intent = getIntent();
@@ -70,6 +73,11 @@ public class CompanyInfoActivity extends AppCompatActivity {
     private void gotoUserManage(){
         Log.v(TAG, "gotoUserManage)");
         // TODO: 跳转
+        // 跳转
+        Intent intent = new Intent();
+        intent.putExtras(getIntent());
+        intent.setClass(this, UserListActivity.class);
+        startActivity(intent);
     }
 
     /**

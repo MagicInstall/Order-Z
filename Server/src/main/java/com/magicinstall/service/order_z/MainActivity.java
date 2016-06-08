@@ -4,9 +4,8 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
 import android.support.v4.widget.SwipeRefreshLayout;
-import android.support.v7.app.ActionBar;
+import android.support.v7.widget.Toolbar;
 import android.util.Log;
-import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
@@ -33,29 +32,31 @@ public class MainActivity extends TcpQueryActivity
 
     private SwipeRefreshLayout mSwipeLayout;
     private ListView mListView;
-    private List<HashMap<String, Object>> mCompanyList = new ArrayList<>();
     private SimpleAdapter mCompanyListAdapter;
-//    private RefreshRecyclerAdapter mCompanyListAdapter;
+    //    private RefreshRecyclerAdapter mCompanyListAdapter;
+
+    /** TODO: 改成唔再自己持有哩个列表 */
+    private List<HashMap<String, Object>> mCompanyList = new ArrayList<>();
 
 
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        getMenuInflater().inflate(R.menu.menu_main, menu);
-        return true;
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        switch (item.getItemId()) {
-            case R.id.AddCompanyButton:
-                // 跳转
-                Intent intent = new Intent();
-                intent.setClass(this, CompanyInfoActivity.class);
-                startActivity(intent);
-                return true;
-        }
-        return super.onOptionsItemSelected(item);
-    }
+//    @Override
+//    public boolean onCreateOptionsMenu(Menu menu) {
+//        getMenuInflater().inflate(R.menu.menu_main, menu);
+//        return true;
+//    }
+//
+//    @Override
+//    public boolean onOptionsItemSelected(MenuItem item) {
+//        switch (item.getItemId()) {
+//            case R.id.AddCompanyButton:
+//                // 跳转
+//                Intent intent = new Intent();
+//                intent.setClass(this, CompanyInfoActivity.class);
+//                startActivity(intent);
+//                return true;
+//        }
+//        return super.onOptionsItemSelected(item);
+//    }
 
 
 
@@ -67,13 +68,37 @@ public class MainActivity extends TcpQueryActivity
         setContentView(R.layout.activity_main);
 
         // 弱智安卓要手动设置ActionBar图标...
-        ActionBar actionBar = getSupportActionBar();
-        actionBar.setLogo(R.mipmap.ic_launcher);
-        actionBar.setDisplayUseLogoEnabled(true);
-        actionBar.setDisplayShowHomeEnabled(true);
+//        ActionBar actionBar = getSupportActionBar();
+//        actionBar.setLogo(R.mipmap.ic_launcher);
+//        actionBar.setDisplayUseLogoEnabled(true);
+//        actionBar.setDisplayShowHomeEnabled(true);
 
-//        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+        Toolbar toolbar = (Toolbar) findViewById(R.id.Toolbar);
 //        setSupportActionBar(toolbar);
+        //设置右上角的填充菜单
+        toolbar.inflateMenu(R.menu.menu_main);
+        toolbar.setOnMenuItemClickListener(new Toolbar.OnMenuItemClickListener() {
+            /**
+             * This method will be invoked when a menu item is clicked if the item itself did
+             * not already handle the event.
+             *
+             * @param item {@link MenuItem} that was clicked
+             * @return <code>true</code> if the event was handled, <code>false</code> otherwise.
+             */
+            @Override
+            public boolean onMenuItemClick(MenuItem item) {
+                switch (item.getItemId()){
+                    case R.id.AddCompanyButton:
+                        Log.i(TAG, "添加企业");
+                        // 跳转
+                        Intent intent = new Intent();
+                        intent.setClass(getBaseContext(), CompanyInfoActivity.class);
+                        startActivity(intent);
+                        break;
+                }
+                return false;
+            }
+        });
 
         mSwipeLayout = (SwipeRefreshLayout)findViewById(R.id.MainSwipe);
 //        swipe.setColorSchemeResources(R.color.color1, R.color.color2,
@@ -133,7 +158,7 @@ public class MainActivity extends TcpQueryActivity
 
 
         mCompanyListAdapter = new SimpleAdapter(
-                this, mCompanyList, R.layout.company_main,
+                this, mCompanyList, R.layout.item_company_list,
                 new String[]{
                         Define.DATABASE_COMPANY_NAME/*, "phone", "amount"*/},
                 new int[]{R.id.name/*, R.id.phone, R.id.amount*/});
@@ -157,6 +182,25 @@ public class MainActivity extends TcpQueryActivity
 
     }
 
+    /**
+     * SwipeRefreshLayout 的用户下拉刷新事件
+     */
+    @Override
+    public void onRefresh() {
+        Log.v(TAG, "onSwipeRefresh");
+        getCompanyList();
+//        new Handler().postDelayed(new Runnable() {
+//            @Override public void run() {
+//
+//                mSwipeLayout.setRefreshing(false);
+//            }
+//        }, 2000);
+    }
+
+    /**
+     * 点击某个企业事件
+     * @param item
+     */
     protected void onCompanyClick(HashMap<String, Object> item) {
         Log.i(TAG, "onCompanyClick " + item.get(Define.DATABASE_COMPANY_NAME) +
                 " id:" + item.get(Define.DATABASE_COMPANY_ID));
@@ -180,41 +224,48 @@ public class MainActivity extends TcpQueryActivity
     @Override
     protected void onStart() {
         super.onStart();
-        Log.i(TAG, "onStart");
+        Log.v(TAG, "onStart");
 
-        if (mCompanyList.size() < 1)
-            // 异步取得企业列表
-            getCompanyList();
+//        mSwipeLayout.post(new Runnable(){
+//            @Override
+//            public void run() {
+//                mSwipeLayout.setRefreshing(true);
+//            }
+//        });
+
+//        if (mCompanyList.size() < 1)
+        // 异步取得企业列表
+        getCompanyList();
     }
 
     @Override
     protected void onRestart() {
         super.onRestart();
-        Log.i(TAG, "onRestart");
+        Log.v(TAG, "onRestart");
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        Log.i(TAG, "onResume");
+        Log.v(TAG, "onResume");
     }
 
     @Override
     protected void onPause() {
         super.onPause();
-        Log.i(TAG, "onPause");
+        Log.v(TAG, "onPause");
     }
 
     @Override
     protected void onStop() {
         super.onStop();
-        Log.i(TAG, "onStop");
+        Log.v(TAG, "onStop");
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        Log.i(TAG, "onDestroy");
+        Log.v(TAG, "onDestroy");
 //        // 撤销MainApplication 的本Activity 的引用
 //        ((MainApplication)getApplication()).setMainActivity(null);
     }
@@ -232,7 +283,19 @@ public class MainActivity extends TcpQueryActivity
      */
     @Override
     public void onRefresh(ArrayList<HashMap<String, Object>> list) {
-
+        // TODO: 改成直接用哩个list 参数设置Adapter
+        mCompanyList.clear();
+        mCompanyList.addAll(list);
+        // 在主线程触发事件
+        Handler handler = new Handler(getMainLooper());
+        handler.post(new Runnable(){
+            @Override
+            public void run() {
+                mListView.setAdapter(mCompanyListAdapter);
+                Log.d(TAG, "setRefreshing(false)");
+                mSwipeLayout.setRefreshing(false);
+            }
+        });
     }
 
     /**
@@ -243,7 +306,17 @@ public class MainActivity extends TcpQueryActivity
      */
     @Override
     public void onAdd(ArrayList<HashMap<String, Object>> list) {
+        mCompanyList.addAll(list);
 
+        // 在主线程触发事件
+        Handler handler = new Handler(getMainLooper());
+        handler.post(new Runnable(){
+            @Override
+            public void run() {
+                mListView.setAdapter(mCompanyListAdapter);
+                // TODO: 显示一下提示
+            }
+        });
     }
 
     /**
@@ -272,28 +345,28 @@ public class MainActivity extends TcpQueryActivity
     /**
      * 由MainApplication 调用的刷新事件.
      */
-    public void onRefresh(DataPacket packet, byte[] extend) {
-        mCompanyList.clear();
-        onAdd(packet, extend);
-    }
-
-    /**
-     * 由MainApplication 调用的企业新建事件
-     */
-    public void onAdd(DataPacket packet, byte[] extend) {
-        // 从报文添加企业项
-        mCompanyList.addAll(companyListPacket2List(packet, extend));
-
-        // 在主线程触发事件
-        Handler handler = new Handler(getMainLooper());
-        handler.post(new Runnable(){
-            @Override
-            public void run() {
-                mListView.setAdapter(mCompanyListAdapter);
-                mSwipeLayout.setRefreshing(false);
-            }
-        });
-    }
+//    public void onRefresh(DataPacket packet, byte[] extend) {
+//        mCompanyList.clear();
+//        onAdd(packet, extend);
+//    }
+//
+//    /**
+//     * 由MainApplication 调用的企业新建事件
+//     */
+//    public void onAdd(DataPacket packet, byte[] extend) {
+//        // 从报文添加企业项
+//        mCompanyList.addAll(companyListPacket2List(packet, extend));
+//
+//        // 在主线程触发事件
+//        Handler handler = new Handler(getMainLooper());
+//        handler.post(new Runnable(){
+//            @Override
+//            public void run() {
+//                mListView.setAdapter(mCompanyListAdapter);
+//                mSwipeLayout.setRefreshing(false);
+//            }
+//        });
+//    }
 
     /**
      * 将报文转换成列表对象
@@ -341,19 +414,21 @@ public class MainActivity extends TcpQueryActivity
 //        packet.pushItem(Define.DATABASE_COMPANY_NAME);
 //        packet.pushItem(Define.DATABASE_COMPANY_PASSWORD);
 
-        ((MainApplication)getApplication()).getCompanyList(getID());
+        // 在主线程更改下拉刷新控件的显示状态
+        Handler handler = new Handler(getMainLooper());
+        handler.post(new Runnable(){
+            @Override
+            public void run() {
+                Log.d(TAG, "setRefreshing(true)");
+                mSwipeLayout.setRefreshing(true);
+                // 为避免setRefreshing(false) 喺setRefreshing(true)之前插入到Looper,
+                // 同样在主线程调用getCompanyList().
+                ((MainApplication)getApplication()).getCompanyList(ACTIVITY_ID);
+            }
+        });
+
+
     }
 
-    @Override
-    public void onRefresh() {
-        Log.v(TAG, "onSwipeRefresh");
-        getCompanyList();
-//        new Handler().postDelayed(new Runnable() {
-//            @Override public void run() {
-//
-//                mSwipeLayout.setRefreshing(false);
-//            }
-//        }, 2000);
-    }
 
 }

@@ -27,9 +27,9 @@ public abstract class TcpQueryActivity extends AppCompatActivity {
      * <p> 子类只需通过重写父类字段{ACTIVITY_ID}即可.
      * @return 返回一个与其它Activity 不同的ID设置
      */
-    public byte getID(){
-        return ACTIVITY_ID;
-    }
+//    public byte getID(){
+//        return ACTIVITY_ID;
+//    }
 
 
     @Override
