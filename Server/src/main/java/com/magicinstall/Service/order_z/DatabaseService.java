@@ -274,6 +274,10 @@ public class DatabaseService extends Service {
             case Define.EXTEND_COMMAND_GET_COMPANY_LIST:
                 Log.v(TAG, "命令:取得企业列表");
                 return replyCompanyList(packet, extend);
+            case Define.EXTEND_COMMAND_GET_USER_LIST:
+                Log.v(TAG, "命令:取得职员列表");
+                return replyUserList(packet, extend);
+
             default:
                 Log.w(TAG, "未知命令" + Hash.bytes2Hex(extend));
                 return null;
@@ -439,5 +443,51 @@ public class DatabaseService extends Service {
         return reply_packet;
     }
 
+
+    /**
+     * 回复企业列表查询
+     * @param packet
+     * @param extend
+     * @return
+     */
+    private DataPacket replyUserList(DataPacket packet, byte[] extend) {
+        List<String> columns = new ArrayList<>();
+        packet.moveToFirstItem();
+        // 第一个item是企业ID
+        int company_id = Hash.byte32ToInt(packet.getCurrentItem().data);
+
+        // 后面是要查询的字段
+        while (packet.moveNextItem() != null) {
+            columns.add(new String(packet.getCurrentItem().data));
+//            packet.moveNextItem();
+        }
+
+
+        DataPacket reply_packet = new DataPacket();
+        // 第一个item 是企业ID
+        reply_packet.pushItem(company_id);
+
+        int count = queryAndPushItem(
+                "Users",
+                columns.toArray(new String[columns.size()]),
+                (Define.DATABASE_USER_IN_COMPANY + "=" + company_id + " AND " +
+                        Define.DATABASE_USER_ID + ">1 AND "/*排除admin 账号*/ +
+                        Define.DATABASE_COMPANY_DELETED + "=0")/*Where*/,
+                null, null, null,
+                null/*Order by Define.DATABASE_COMPANY_ID*/,
+                null,
+                reply_packet);
+
+        byte reply_extend[] = new byte[extend.length + 4/*职员数*/];
+        System.arraycopy(extend, 0, reply_extend, 0, extend.length); // 复制原扩展数据到开头
+//        byte company_count[] = Hash.int2byte32(cursor.getCount());
+        System.arraycopy(
+                Hash.int2byte32(count), 0,
+                reply_extend, extend.length,
+                4); // 填入职员数
+
+        reply_packet.make(reply_extend, null/*TODO: RSA*/);
+        return reply_packet;
+    }
 
 }

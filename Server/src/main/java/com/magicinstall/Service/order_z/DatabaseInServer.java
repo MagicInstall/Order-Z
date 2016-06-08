@@ -46,6 +46,9 @@ public class DatabaseInServer extends Database {
         db.execSQL("INSERT INTO Users(Name, PasswordMD5, InCompany) " +
                 "VALUES ('admin', '21232F297A57A5A743894A0E4A801FC3', 0)"); // 默认密码是admin
 
+        // 测试
+        db.execSQL("INSERT INTO Users(Name, InCompany) VALUES ('测试', 1)");
+
         // 企业表
         db.execSQL(
                 "CREATE TABLE Company (" +

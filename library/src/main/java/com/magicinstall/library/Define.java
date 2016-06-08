@@ -49,12 +49,15 @@ public class Define {
 
     /** 取得企业列表命令*/
     public static final int EXTEND_COMMAND_GET_COMPANY_LIST = 111;
+    /** 取得职员列表命令*/
+    public static final int EXTEND_COMMAND_GET_USER_LIST = 121;
     /************************************************************************
      *                             服务端命令                                *
      ************************************************************************/
     /** 新增企业命令*/
     public static final int EXTEND_COMMAND_NEW_COMPANY = 011;
-
+    /** 新增职员命令*/
+    public static final int EXTEND_COMMAND_NEW_User = 021;
     /************************************************************************
      *                              数据库字段                                *
      ************************************************************************/
@@ -66,4 +69,10 @@ public class Define {
     public static final String DATABASE_COMPANY_OWNER    = "DatabaseOwner";
     public static final String DATABASE_COMPANY_PASSWORD = "PasswordMD5";
     public static final String DATABASE_COMPANY_DELETED  = "Deleted";
+
+    public static final String DATABASE_USER_ID         = "ID";
+    public static final String DATABASE_USER_NAME       = "Name";
+    public static final String DATABASE_USER_PASSWORD   = "PasswordMD5";
+    public static final String DATABASE_USER_IN_COMPANY = "InCompany";
+    public static final String DATABASE_USER_DELETED    = "Deleted";
 }
