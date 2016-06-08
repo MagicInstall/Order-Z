@@ -1,14 +1,19 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    tools:context="com.magicinstall.service.order_z.MainActivity">
+    tools:context=".MainActivity">
     <item
         android:id="@+id/action_settings"
-        android:orderInCategory="100"
+        android:icon="@android:drawable/ic_menu_preferences"
         android:title="@string/action_settings"
-        app:showAsAction="never" />
+        app:showAsAction="ifRoom" />
     <item
-        android:title="添加"
+        android:id="@+id/RemoteCompany"
+        android:icon="@android:drawable/ic_dialog_map"
+        android:title="@string/menu_remote"
+        app:showAsAction="ifRoom" />
+    <item
+        android:title="@string/menu_add"
         android:id="@+id/AddCompanyButton"
         android:icon="@android:drawable/ic_menu_add"
         app:showAsAction="always"/>

@@ -11,4 +11,17 @@
     <string name="txt_company_sub_name">后缀名</string>
     <string name="txt_personnel_management">人事管理</string>
     <string name="txt_propdowm_refresh">下拉刷新</string>
+    <string name="txt_menu_management">菜单管理</string>
+    <string name="txt_tap_edit_logo">点击图像进行变更</string>
+    <string name="company_sub_company">下属企业</string>
+    <string name="company_address">详细地址</string>
+    <string name="txt_modify_pasword">修改密码</string>
+    <string name="txt_order_statistics">订单查询</string>
+    <string name="menu_add">添加</string>
+    <string name="menu_remote">远程</string>
+    <string name="userlist_title">职员管理</string>
+    <string name="menu_change_manager">变更主管</string>
+    <string name="txt_user_name">职员名字</string>
+    <string name="txt_manager">主管</string>
+    <string name="txt_user_number">职员编号</string>
 </resources>

@@ -174,4 +174,18 @@
     <string name="txt_company_sub_name">Sub name</string>
     <string name="txt_personnel_management">Personnel management</string>
     <string name="txt_propdowm_refresh">Propdowm refresh</string>
+    <string name="txt_menu_management">Menu_management</string>
+    <string name="txt_tap_edit_logo">Tap logo by modifying</string>
+    <string name="company_sub_company">Subsidiaries management</string>
+    <string name="company_address">Address details</string>
+    <string name="txt_modify_pasword">Modify password</string>
+    <string name="txt_order_statistics">Order Statistics</string>
+    <string name="company_sub_title">Choose a company</string>
+    <string name="menu_add">Add</string>
+    <string name="menu_remote">Remote</string>
+    <string name="userlist_title">Staff Management</string>
+    <string name="menu_change_manager">Change manager</string>
+    <string name="txt_user_name">Staff name</string>
+    <string name="txt_manager">Manager</string>
+    <string name="txt_user_number">Staff No.</string>
 </resources>
