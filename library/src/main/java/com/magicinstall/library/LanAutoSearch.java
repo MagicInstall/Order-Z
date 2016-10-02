@@ -63,8 +63,11 @@ public class LanAutoSearch {
         return mBroadcastTTL;
     }
 
-
-    private int mTimeout = 1000; // 默认1秒
+    /** 哩个时间唔可以太大, 否则经常开关会出错,
+     *  因为receive 有可能长时间阻塞,
+     *  导致端口冇办法释放, 继而无法进行初始化.
+     */
+    private int mTimeout = Define.SOCKET_LISTEN_TIMEOUT;
     /**
      * 设置Socket 收发的超时时间
      * <p>由于Socket 必须在另一线程收发报文,
@@ -174,7 +177,7 @@ public class LanAutoSearch {
                         receive_buffer, receive_buffer.length); //, mGroupAddress, port);
 
                 String Client_ip;
-
+                Log.i(TAG, "服务端开始监听");
                 while (mListening) {
 
                     try {
@@ -206,7 +209,11 @@ public class LanAutoSearch {
                 }
                 mMulticastSocket = null;
                 mListening       = false;
-                Log.w(TAG, "Server is going to stop the listen thread!");
+
+                // 中止send 线程
+                if (mSendThread != null) mSendThread.quit();
+                mSendHandler = null;
+                Log.i(TAG, "服务端正在停止监听线程");
             }
         }.start();
         
@@ -300,7 +307,15 @@ public class LanAutoSearch {
      * @return true: 运行过程顺利(不包括收发过程), false: 应该提醒用户确认Wifi 状态!
      */
     public boolean startClient(int broadcastPort, int unicastPort, int interval){
-        if (mListening) return false;
+        if (mListening || (mDatagramSocket != null)){
+            Log.w(TAG, "如要使用不同的端口, 必须用另一个实例进行");
+            return false;
+        }
+
+//        if (mClientRuning == true) {
+//            Log.w(TAG, "单播线程未停止");
+//            return false;
+//        }
 
         // 初始化socket
         if (!initSocket(broadcastPort, unicastPort)) return false;
@@ -316,6 +331,9 @@ public class LanAutoSearch {
 //        send(local_ip.getBytes());
 //        return true;
     }
+
+    /** 哩个变量专门用嚟解决客户端频繁启动问题 */
+    private boolean mClientRuning = false;
 
     /**
      * Client监听广播
@@ -334,11 +352,11 @@ public class LanAutoSearch {
                         receive_bufffer, receive_bufffer.length); //, mGroupAddress, port);
 
                 String Client_ip;
-
+                Log.i(TAG, "客户端开始监听");
+                mClientRuning = true;
                 while (mListening) {
 
                     try {
-//                        mMulticastSocket.receive(receive_packet);
                         mDatagramSocket.receive(receive_packet);
                     }
                     // 超时会进入下一次的while 判定, 利于中止线程
@@ -373,16 +391,17 @@ public class LanAutoSearch {
                     // 复制一份报文的副本, 不然会出现线程问题
                     final DatagramPacket event_packet = copyPacket(receive_packet);
 
-                    // 在主线程触发事件
-                    Handler handler = new Handler(mContext.getMainLooper());
-                    handler.post(new Runnable(){
-                        @Override
-                        public void run() {
+//                    // 在主线程触发事件
+//                    Handler handler = new Handler(mContext.getMainLooper());
+//                    handler.post(new Runnable(){
+//                        @Override
+//                        public void run() {
                             // 调用事件
                             onFoundServerEvent(event_packet);
-                        }
-                    });
+//                        }
+//                    });
                 }
+                mClientRuning = false;
 
 //                // 退出广播组
 //                if (mMulticastSocket != null) {
@@ -393,10 +412,10 @@ public class LanAutoSearch {
 //                    }
 //                    mMulticastSocket = null;
 //                }
+                Log.i(TAG, "客户端正在停止监听线程");
                 mDatagramSocket.close();
                 mDatagramSocket = null;
                 mListening = false;
-                Log.w(TAG, "Client is going to stop the listen thread!");
             }
         }.start();
 
@@ -423,7 +442,7 @@ public class LanAutoSearch {
                     Log.e(TAG, "willCallServerEvent return null, 广播不会执行");
                     // 跳过下边循环体
 
-                else
+                else {
                     while (mListening) {
                         send(mMulticastSocket, data, broadcastPort);
 
@@ -433,6 +452,11 @@ public class LanAutoSearch {
                             e.printStackTrace();
                         }
                     }
+
+                    // 中止send 线程
+                    if (mSendThread != null) mSendThread.quit();
+                    mSendHandler = null;
+                }
 
                 // 退出广播组
                 if (mMulticastSocket != null) {
@@ -451,7 +475,7 @@ public class LanAutoSearch {
 
     /**
      * 客户端收到一个服务端的应答的事件
-     * <p>哩个事件已经被放入主线程运行
+     * <p>哩个事件唔喺主线程运行
      * <p>对服务端发来的数据应该在哩个事件中进行.
      */
     public void onFoundServerEvent(DatagramPacket packet){}
@@ -465,11 +489,14 @@ public class LanAutoSearch {
     private boolean mListening = false;
     /**
      * 中止接收线程的循环体
-     * <p>哩个方法只系中止while 循环, 并不能中止receive 的阻塞,
+     * <p>哩个方法只系中止while 循环, 并不能中止receive 的阻塞.
+     * <p>哩个方法唔可以放喺同一个Activity的 onPause onDestroy 之类的事件中调用!
+     * 因为onDestroy 与onCreate 之间一般只有几十毫秒,
+     * 根本不够时间让receive 超时来退出阻塞!
      * @see .setTimeout
      */
     public void stop() {
-        mListening = true;
+        mListening = false;
         // 由线程负责退出广播组, 同埋将Socket 引用变null
     }
 
@@ -485,6 +512,14 @@ public class LanAutoSearch {
             final DatagramSocket socket,
             final byte[] data, final int length,
             final InetAddress address, final int port) {
+
+        // send 专用线程
+        if (mSendHandler == null) {
+            mSendThread = new HandlerThread("UDP send");
+            mSendThread.start();
+            mSendHandler = new Handler(mSendThread.getLooper());
+        }
+
         mSendHandler.post(new Runnable() {
             @Override
             public void run() {
@@ -587,18 +622,24 @@ public class LanAutoSearch {
         }
 
         // 单播Socket
+        try { mDatagramSocket = new DatagramSocket(unicastPort);
+        } catch (SocketException e) {
+            Log.w(TAG, "单播地址已被使用");
+            return false;
+        }
+
+
         try {
-            mDatagramSocket = new DatagramSocket(unicastPort);
             mDatagramSocket.setSoTimeout(mTimeout);
         } catch (SocketException e) {
             e.printStackTrace();
             return false;
         }
 
-        // send 专用线程
-        mSendThread = new HandlerThread("UDP send");
-        mSendThread.start();
-        mSendHandler = new Handler(mSendThread.getLooper());
+//        // send 专用线程
+//        mSendThread = new HandlerThread("UDP send");
+//        mSendThread.start();
+//        mSendHandler = new Handler(mSendThread.getLooper());
 
         return true;
     }
@@ -639,7 +680,7 @@ public class LanAutoSearch {
      * 释放资源
      */
     protected void finalize() {
-        mSendThread.quit();
+//        mSendThread.quit();
     }
 
 

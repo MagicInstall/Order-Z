@@ -5,9 +5,22 @@ package com.magicinstall.library;
  * Created by wing on 16/5/25.
  */
 public class Define {
+
+    /************************************************************************
+     *                            Activity ID                               *
+     ************************************************************************/
+    public static final byte LOGIN_ACTIVITY_ID = 01;
+    public static final byte MAIN_ACTIVITY_ID  = 02;
+
+
+    /************************************************************************
+     *                              网络常量                                 *
+     ************************************************************************/
     public static final String UDP_BROADCAST_GROUP = "224.0.0.1";
     public static final int UDP_BROADCAST_PORT = 13130;
     public static final int UDP_UNICAST_PORT = 13139;
+    public static final int UDP_SEARCH_INTERVAL = 10000/*10秒*/;
+    public static final int SOCKET_LISTEN_TIMEOUT = 10000/*10秒*/;
     public static final int RSA_KEY_LENGTH = 1024/*bit*/;
     public static final int TCP_PORT = 13139;
 
@@ -47,17 +60,51 @@ public class Define {
      * 使用哩个命令要提供超级管理员帐号 */
     public static final int EXTEND_COMMAND_SQL = 0xFF;
 
+    /** 客户端请求登陆 */
+    public static final int EXTEND_COMMAND_USER_LOGIN = 101;
+    /** 客户端请求登出 */
+    public static final int EXTEND_COMMAND_USER_LOGOUT = 102;
+    /** 成功登陆标志 */
+    public static final int LOGIN_FLAG_SUCCESS  = 0b0000;
+    /** 用户不存在标志 */
+    public static final int LOGIN_FLAG_NOT_USER = 0b0001;
+    /** 该用户被标记为已删除 */
+    public static final int LOGIN_FLAG_ERROR_USER_DEL = -1 & ~ 0b0001;
+    /** 密码不对 */
+    public static final int LOGIN_FLAG_ERROR_PASSWORD = -1 & ~ 0b0010;
+
+
     /** 取得企业列表命令*/
     public static final int EXTEND_COMMAND_GET_COMPANY_LIST = 111;
     /** 取得职员列表命令*/
     public static final int EXTEND_COMMAND_GET_USER_LIST = 121;
+
+    /** 新职员请求加入命令*/
+    public static final int EXTEND_COMMAND_USER_REQUEST_JOIN = 122/* 0x7A */;
+    /* 无此用户, 可以Join */
+    public static final int USER_JOIN_FLAG_NO_ERROR = 0x7A0000;
+    public static final int USER_JOIN_FLAG_NOT_USER = USER_JOIN_FLAG_NO_ERROR;
+    /* 该用户已存在, 且是活跃的 */
+    public static final int USER_JOIN_FLAG_IS_EXISTS = USER_JOIN_FLAG_NO_ERROR | 0b0001;
+    /* 该用户已存在, 但已标记为删除*/
+    public static final int USER_JOIN_FLAG_IS_DELETED = USER_JOIN_FLAG_NO_ERROR | 0b0010;
+    /* 该用户名在同一个企业有多个匹配, 标志的后15位表示重复的数量 */
+    public static final int USER_JOIN_FLAG_IS_PLURAL  = USER_JOIN_FLAG_NO_ERROR | 0b1000000000000000;
+
+
+
     /************************************************************************
      *                             服务端命令                                *
      ************************************************************************/
+    /** 向客户端索取用户名及密码进行验证 */
+    public static final int EXTEND_COMMAND_VERIFY_USER = 001;
     /** 新增企业命令*/
     public static final int EXTEND_COMMAND_NEW_COMPANY = 011;
     /** 新增职员命令*/
-    public static final int EXTEND_COMMAND_NEW_User = 021;
+    public static final int EXTEND_COMMAND_NEW_USER = 021;
+
+
+
     /************************************************************************
      *                              数据库字段                                *
      ************************************************************************/

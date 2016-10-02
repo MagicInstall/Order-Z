@@ -20,7 +20,7 @@ import java.util.Date;
  * Created by wing on 16/4/25.
  */
 public abstract class Database extends SQLiteOpenHelper{
-    private static final String TAG = Database.class.toString();
+    private static final String TAG = "Database";
 
     private Context mContext;
     private SQLiteDatabase mDatabase;
@@ -278,5 +278,72 @@ public abstract class Database extends SQLiteOpenHelper{
                          String limit) {
         // 直接转发
         return mDatabase.query(table, columns, where, whereArgs, groupBy, having, orderBy, limit);
+    }
+
+    /**
+     * 根据传入的{columns} 参数的顺序, 将查询的结果逐一压入分包对象.
+     * @param table 表名
+     * @param columns 列名数组
+     * @param where 条件子句
+     * @param whereArgs 条件语句的参数数组
+     * @param groupBy 分组
+     * @param having 分组条件
+     * @param orderBy 排序类
+     * @param limit 分页查询的限制
+     * @param packet 传入分包的指针
+     * @return
+     */
+    public int queryAndPushItem(String table,
+                                 String[] columns,
+                                 String where,
+                                 String[] whereArgs,
+                                 String groupBy,
+                                 String having,
+                                 String orderBy,
+                                 String limit,
+                                 DataPacket packet) {
+
+        Cursor cursor = mDatabase.query(table, columns, where, whereArgs, groupBy, having, orderBy, limit);
+
+        if (cursor.moveToFirst()) {
+            do {
+                // 遍历字段
+                for (String column : columns) {
+                    // 判断字段类型
+                    switch (cursor.getType(cursor.getColumnIndex(column))) {
+                        case Cursor.FIELD_TYPE_BLOB:
+                            packet.pushItem(
+                                    cursor.getBlob(
+                                            cursor.getColumnIndex(column)));
+                            break;
+
+                        case Cursor.FIELD_TYPE_FLOAT:
+                            // TODO: DataPacket 类的pushItem 方法加入对浮点数的支持
+                            packet.pushItem((byte[]) null); // 暂时用空项代替
+                            break;
+
+                        case Cursor.FIELD_TYPE_INTEGER:
+                            packet.pushItem(
+                                    cursor.getInt(
+                                            cursor.getColumnIndex(column)));
+                            break;
+
+                        case Cursor.FIELD_TYPE_NULL:
+                            packet.pushItem((byte[]) null);
+                            break;
+
+                        case Cursor.FIELD_TYPE_STRING:
+                            packet.pushItem(
+                                    cursor.getString(
+                                            cursor.getColumnIndex(column)));
+                            break;
+                    }
+                }
+            } while (cursor.moveToNext());
+
+        }
+        else Log.i(TAG, "该查询没有一个列返回");
+
+        return cursor.getCount();
     }
 }

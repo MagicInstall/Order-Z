@@ -1,15 +1,36 @@
 package com.magicinstall.phone.order_z;
 
+import android.app.Activity;
+import android.app.Application;
 import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.os.Handler;
 import android.preference.PreferenceManager;
+import android.support.annotation.NonNull;
 import android.util.Log;
+
+import com.magicinstall.library.ClientSocket;
+import com.magicinstall.library.Company;
+import com.magicinstall.library.DataPacket;
+import com.magicinstall.library.Define;
+import com.magicinstall.library.Hash;
+import com.magicinstall.library.LanAutoSearch;
+import com.magicinstall.library.TcpQueryActivity;
+import com.magicinstall.library.User;
+
+import java.io.IOException;
+import java.net.DatagramPacket;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.HashSet;
 
 /**
  * Created by wing on 16/4/25.
  */
-public class MainApplication extends ActivityManagerApplication{
+public class MainApplication extends Application
+        implements TcpQueryActivity.InteractionActivity{
     private static final String TAG = "MainApplication";
 
     private static String PREFERENCE_LOGINED_KEY = "PREFERENCE_LOGINED_KEY";
@@ -143,8 +164,6 @@ public class MainApplication extends ActivityManagerApplication{
 
 
 
-        // TODO: 检查自己是否持有数据库
-
         // TODO: 本地验证
         // TODO: 连接主机
     }
@@ -188,39 +207,30 @@ public class MainApplication extends ActivityManagerApplication{
         return version;
     }
 
+
     /************************************************************************
-     *                            LoginActivity                             *
+     *                         InteractionActivity                          *
      ************************************************************************/
 
     /**
-     * LoginActivity 取得数据库里全部企业名
-     * @return
+     * Activity 活动状态改变事件
+     * <p>让Application 保存或撤销Activity 的引用,
+     * 便于回调TcpQueryActivity 上的方法.
+     *
+     * @param activity 引发事件的Activity
+     * @param isActive true: 表示传入的Activity 应该保存引用;
      */
-    public String[] getAllCompanies() {
-//        if (mServiceAIDL == null) {
-//            Log.e(TAG, "未连接AIDL");
-//            return new String[]{"未连接AIDL"};
-//        }
-        return new String[]{"哈哈", "呵呵"};
-    }
-
-    /**
-     * LoginActivity 验证用户登陆
-     * @param user
-     * @param passwordMD5
-     * @return
-     */
-    public boolean verifyUser(String company, String user, String passwordMD5) {
-        return false;
-    }
-
-    /**
-     * SettingsActivity 用户登出
-     * <p>登出选项在设置里边
-     */
-    public void exitUser() {
+    @Override
+    public void onActiveChanged(Activity activity, boolean isActive) {
+        // LoginActivity
+        if (activity.getClass() ==  LoginActivity.class) {
+            if (isActive) mLoginActivity = (LoginActivity) activity;
+            else          mLoginActivity = null;
+        }
 
     }
+
+
 
 
     /************************************************************************
@@ -277,4 +287,587 @@ public class MainApplication extends ActivityManagerApplication{
 //            Log.d(TAG, msg);
 //        }
 //    };
+
+
+
+    /************************************************************************
+     *                              UDP Socket                              *
+     *   哩度使用自己嘅ClientSocket 集合, 与平时使用的ClientSocket 实例区分处理   *
+     ************************************************************************/
+    private LanAutoSearch mServerSearcher;
+
+    /** 自动搜主机使用自己的Socket 集合 */
+    private HashSet<ClientSocket> mTcpSockets = new HashSet<>();
+
+    /** 轮询主机用 */
+//    private HashMap<String/*IP*/, InetAddress> mServerIp = new HashMap<>();
+    /** 企业实例反查IP用 */
+//    private HashMap<Company, InetAddress> CompanyIp = new HashMap<>();
+
+    /** 哩个内部类保存搜索到的服务端 */
+//    public class Company {
+//        public InetAddress Address = null;
+//        int Id = 0;
+//        public String Name = null;
+//        public String SubName = null;
+//        public RSA Rsa = null;
+//    }
+//
+//    private HashMap<String/*IP*/, Company>CompanyMap = new HashMap<>();
+
+    /**
+     * 解释企业刷新/添加报文
+     */
+    protected void companyRefresh(DataPacket packet, byte extend[]) {
+        Log.d(TAG, "正在处理企业列表报文");
+
+
+        ArrayList<Company> company_list = Company.packet2Company(packet, extend);
+//        ArrayList<Company> adapter_list = mLoginActivity.getCompanyList();
+        if (company_list == null) return;
+
+        Here : for (Company new_company : company_list) {
+            // 与已有的实例进行碰撞
+            for (Company old_company : Companies) {
+                // 当有相同的企业:
+                if (old_company.hashCode() == new_company.hashCode()) {
+                    // 只更新数组
+                    Companies.set(
+                            Companies.indexOf(old_company),
+                            new_company
+                    );
+                    continue Here; // 跳过下面的更新过程
+                }
+            }
+
+            Companies.add(new_company);
+
+
+        }
+
+
+        // 在主线程更新UI
+        Handler handler = new Handler(getMainLooper());
+        handler.post(new Runnable(){
+            @Override
+            public void run() {
+                if (mLoginActivity == null){
+                    Log.w(TAG, "LoginActivity 已注销");
+                    return;
+                }
+
+                Log.d(TAG, "更新企业列表");
+                mLoginActivity.onRefresh(Companies);
+            }
+        });
+
+    }
+
+    /** 开始搜服务端
+     * 停止代码直接写在onPause 事件中 */
+    public void startSearchServer() {
+        if (mServerSearcher != null) return;
+
+        try {
+            mServerSearcher = new LanAutoSearch(this, Define.UDP_BROADCAST_GROUP){
+                /**
+                 * 客户端在准备广播通知在线服务器的事件
+                 * <p>哩个事件不在主线程执行!
+                 * <p>对将要发送的数据加密应该在哩个事件中进行.
+                 *
+                 * @return 返回一段数据用于发给服务端的数据,
+                 * 该数据返回null 将会导致广播中止,
+                 * 正常情况应该用{@Link stop()} 方法中止广播.
+                 */
+                @Override
+                public byte[] willCallServerEvent() {
+                    // TODO: 发一段防伪信息
+                    return super.willCallServerEvent();
+                }
+
+                /**
+                 * 客户端收到一个服务端的应答的事件
+                 * <p>哩个事件已经被放入主线程运行
+                 * <p>对服务端发来的数据应该在哩个事件中进行.
+                 *
+                 * @param packet
+                 */
+                @Override
+                public void onFoundServerEvent(DatagramPacket packet) {
+
+                    InetAddress address = packet.getAddress();
+
+                    for (ClientSocket client : mTcpSockets){
+                        if (client.getSocket().getInetAddress().equals(packet.getAddress()))
+                            return;
+                    }
+
+                    Log.i(TAG, "搜索到服务端" + address.toString());
+//                    if (mServerIp.containsKey(address.toString())) return;
+
+                    // TODO: 显示一个Toast
+
+//                    mServerIp.put(address.toString(), address);
+
+                    // 让Application 代为连接服务端, 等连接成功后会触发事件更新
+                    String ip = address.getHostAddress();
+//                    ((MainApplication)getApplicationContext()).connectionServer(ip);
+
+                    ClientSocket socket = new ClientSocket(ip, Define.TCP_PORT, null) {
+                        @Override
+                        public void onClose(ClientSocket client) {
+                            if (mTcpSockets.contains(client)) {
+                                String cli_ip = client.getSocket().getInetAddress().getHostAddress();
+                                ArrayList<Company> will_remove = new ArrayList<>();
+
+                                for (Company company: Companies){
+                                    String com_ip = company.ServerAddress.getHostAddress();
+
+                                    if (company.ServerAddress.getHostAddress().equals(client.getSocket().getInetAddress().getHostAddress()))
+                                        // 唔可以remove 正在遍历的集合元素, 只能用另一个集合保存要移除的引用
+                                        will_remove.add(company);
+                                }
+
+                                // 移除相关的企业
+                                for (Company company: will_remove) {
+                                    Companies.remove(company);
+                                }
+
+                                mTcpSockets.remove(client);
+
+                                // 在主线程更新UI
+                                Handler handler = new Handler(getMainLooper());
+                                handler.post(new Runnable(){
+                                    @Override
+                                    public void run() {
+                                        if (mLoginActivity == null){
+                                            Log.w(TAG, "LoginActivity 已注销");
+                                            return;
+                                        }
+
+                                        Log.d(TAG, "更新企业列表");
+                                        mLoginActivity.onRefresh(Companies);
+                                    }
+                                });
+                            }
+                        }
+
+                        @Override
+                        public void onConnected(final ClientSocket client) {
+                            mTcpSockets.add(client);
+
+                            // 取得一次企业列表
+                            getCompanyList(LoginActivity.ACTIVITY_ID, client);
+
+//                            // 在新线程运行
+//                            new Thread() {
+//                                @Override
+//                                public void run() {
+//                                    Thread.currentThread().setPriority(4); // 稍低的优先级
+//                                    Thread.currentThread().setName("取得一次企业列表");
+//                                    // 转换成报文
+//                                    DataPacket packet = new DataPacket();
+//                                    packet.make(new byte[] {
+//                                            Define.EXTEND_COMMAND_GET_COMPANY_LIST,
+//                                            LoginActivity.ACTIVITY_ID
+//                                    });
+//
+//                                    client.send(packet);
+//                                }
+//                            }.start();
+                        }
+
+                        @Override
+                        public DataPacket onReceivedCompletePacket(DataPacket packet, byte[] extend) {
+                            Log.v(TAG, "收到服务端报文");
+                            int command = Hash.byte32ToInt(extend, Define.EXTEND_COMMAND_OFFSET, 1/*字节*/);
+                            switch (command) {
+                                case Define.EXTEND_COMMAND_GET_COMPANY_LIST:
+                                case Define.EXTEND_COMMAND_NEW_COMPANY:
+                                    // 两个命令的处理过程系一样嘅
+                                    companyRefresh(packet, extend);
+                                    break;
+
+                                case Define.EXTEND_COMMAND_USER_LOGIN:
+                                    onLoginReply(packet, extend);
+                                    break;
+
+                                case Define.EXTEND_COMMAND_USER_REQUEST_JOIN:
+                                    onNewUserReply(packet, extend);
+                                    break;
+                            }
+                            return null;
+                        }
+                    };
+
+//                    mServerSearcher.stop(); TODO: 改成登陆后
+                }
+            };
+        } catch (UnknownHostException e) {
+            Log.e(TAG, "searchServer -> " + Define.UDP_BROADCAST_GROUP + " 不是UDP 广播组IP");
+            return;
+        }
+
+        boolean s = mServerSearcher.startClient(
+                Define.UDP_BROADCAST_PORT,
+                Define.UDP_UNICAST_PORT,
+                Define.UDP_SEARCH_INTERVAL);
+
+        if (!s) Log.e(TAG, "无法启动服务端自动搜索");
+    }
+
+
+    /** 停止搜索服务端 */
+    public void stopSearchServer() {
+        if (mServerSearcher != null) mServerSearcher.stop();
+        mServerSearcher = null;
+
+
+        // 关闭全部TCP Socket
+        for(ClientSocket client: mTcpSockets) {
+            if (client.isConnected()) {
+                try { client.getSocket().close();
+                } catch (IOException e) {
+                    Log.w(TAG,
+                            client.getSocket().getInetAddress().toString() +
+                                    " 被多次重复关闭");
+                }
+            }
+            mTcpSockets.remove(client);
+        }
+    }
+
+
+    /************************************************************************
+     *                              TCP Socket                              *
+     ************************************************************************/
+    /** 平时主要使用的Socket */
+    private ClientSocket mClientSocket = null;
+
+    /**
+     * 取得TCP Socket 是否已经连接到服务端
+     * @return true:已连接
+     */
+    public boolean isConnected(){return mClientSocket.isConnected();}
+
+    /**
+     * 向服务端发起TCP 连接
+     * <p>除登陆界面外, 此方法只由本实例调用
+     */
+    private void connectionServer(String ip){
+        mClientSocket = new ClientSocket(ip, Define.TCP_PORT, null) {
+            @Override
+            public void onConnected(ClientSocket client) {
+//                // 先取得一次本地服务端的企业列表
+//                getCompanyList(LoginActivity.ACTIVITY_ID, mClientSocket);
+            }
+
+            @Override
+            public DataPacket onReceivedCompletePacket(DataPacket packet, byte[] extend) {
+                // 转发事件
+                onGetPacket(packet, extend);
+                return null;
+            }
+        };
+    }
+
+    /**
+     * 收到报文事件
+     * <p>喺哩个方法进行各种包的派发
+     */
+    protected void onGetPacket(DataPacket packet, byte[] extend) {
+        Log.v(TAG, "收到服务端报文"/* + data.length + "字节"*/);
+
+        // TODO: 特殊Activity判断
+
+        // 根据命令派发报文
+        int command = Hash.byte32ToInt(extend, Define.EXTEND_COMMAND_OFFSET, 1/*字节*/);
+        switch (command) {
+            case Define.EXTEND_COMMAND_GET_COMPANY_LIST:
+//                companyRefresh(packet, extend);
+                break;
+            case Define.EXTEND_COMMAND_NEW_COMPANY:
+//                companyAdd(packet, extend);
+                break;
+
+            default:
+                Log.w(TAG, "未知命令:" + command);
+                break;
+        }
+
+//        switch (Hash.byte32ToInt(extend, Define.EXTEND_ACTIVITY_OFFSET, 1/*字节*/)) {
+//            case LoginActivity.ACTIVITY_ID:
+//                if (mLoginActivity != null) {
+//
+//                }
+//                break;
+//            case MainActivity.ACTIVITY_ID:
+//                if (mMainActivity != null) {
+//                    switch (command) {
+//                        case Define.EXTEND_COMMAND_GET_COMPANY_LIST:
+//                            companyRefresh(packet, extend);
+//                            break;
+//                        case Define.EXTEND_COMMAND_NEW_COMPANY:
+//                            companyAdd(packet, extend);
+//                            break;
+//                    }
+//                }
+//                break;
+//            case UserListActivity.ACTIVITY_ID:
+//                if (mUserListActivity != null) {
+//                    switch (command) {
+//                        case Define.EXTEND_COMMAND_GET_USER_LIST:
+//                            usersRefresh(packet, extend);
+//                            break;
+//                        case Define.EXTEND_COMMAND_NEW_USER:
+//                            usersAdd(packet, extend);
+//                            break;
+//                    }
+//                }
+//                break;
+//            default:
+//                Log.w(TAG, "唔知之前系边个Activity 请求查询");
+//                break;
+//        }
+    }
+
+    /************************************************************************
+     *                            LoginActivity                             *
+     ************************************************************************/
+
+    /** 持有已登陆的用户对象
+     * <p>在成功登陆后,
+     * 哩个对象一直存在喺整个App 的生命周期 */
+    public User LoggedInUser = null;
+
+    /** 持有Activity */
+    private LoginActivity mLoginActivity = null;
+    /** 持有企业列表 */
+    public ArrayList<Company> Companies = new ArrayList<>();
+
+
+//    /**
+//     * 解释企业刷新报文
+//     */
+//    protected void companyRefresh(DataPacket packet, byte extend[]) {
+//        ArrayList<Company> company_list = Company.packet2Company(packet, extend);
+//        if (company_list == null) return;
+//
+//        for (Company company : company_list) {
+//            // 哩个判断是以hashCode 为依据的, 移除亦是以hashCode 查找的
+//            if (Companies.contains(company)) Companies.remove(company);
+//
+//            Companies.add(company);
+//        }
+//
+//        if (mLoginActivity != null) mLoginActivity.onRefresh(Companies);
+//
+//    }
+//
+//    /**
+//     * 解释企业添加报文
+//     */
+//    protected void companyAdd(DataPacket packet, byte extend[]) {
+//        ArrayList<Company> company_list = Company.packet2Company(packet, extend);
+//        if (company_list == null) return;
+//
+//        for (Company company : company_list) {
+//            // 哩个判断是以hashCode 为依据的, 移除亦是以hashCode 查找的
+//            if (Companies.contains(company)) Companies.remove(company);
+//
+//            Companies.add(company);
+//        }
+//
+//        if (mLoginActivity != null) mLoginActivity.onAdd(company_list);
+//
+//    }
+
+    /**
+     * 取得企业列表
+     * @param activityID 传入调用哩个方法的Activity的{getID()}的值,
+     *                   当查询返回的时候按照该ID,
+     *                   调用相应的回调方法.
+     * @param client 由于Login 使用的是不同的ClientSocket 实例,
+     *               要喺哩个参数指定具体使用边个实例发送查询报文.
+     */
+    public void getCompanyList(final byte activityID, final ClientSocket client) {
+        // App 连接服务端嘅时候已经取得过企业列表, 直接传递到请求的Activity就是
+//        if (activityID != 0/*Application 自己*/){
+//            switch (activityID) {
+//                case LoginActivity.ACTIVITY_ID:
+//                    LoginActivity.onRefresh(mCompanyList);
+//                    break;
+//            }
+//            return;
+//        }
+
+        // 一般只会是由Application 调用先会去到哩度
+        Log.v(TAG, "请求查询企业列表, Activity ID:" + activityID);
+        // 询问需要的字段
+//        final HashMap<String, String[]> columns =
+//                MainActivity.getColumnsName(
+//                        (byte) Define.EXTEND_COMMAND_GET_COMPANY_LIST,
+//                        new String[]{"CompanyList"});
+
+        // 在新线程运行
+        new Thread() {
+            @Override
+            public void run() {
+                Thread.currentThread().setPriority(4); // 稍低的优先级
+                Thread.currentThread().setName("取得一次企业列表");
+
+                // 转换成报文
+                DataPacket packet = new DataPacket();
+//                for (String column : columns.get("CompanyList")){
+//                    packet.pushItem(column);
+//                }
+                packet.make(new byte[] {
+                        Define.EXTEND_COMMAND_GET_COMPANY_LIST,
+                        activityID
+                });
+
+                client.send(packet);
+            }
+        }.start();
+    }
+
+    /**
+     * 使用平时的Socket 连接服务器
+     * @param company
+     * @param userName
+     * @param password
+     * @return
+     */
+    public boolean login2Server(byte activityID, @NonNull Company company, @NonNull String userName, @NonNull String password) {
+        // 遍历找出对应的 Socket
+        for (ClientSocket client : mTcpSockets) {
+            // 用地址实例作为依据
+            if (client.getSocket().getInetAddress().equals(company.ServerAddress)) {
+                // 得到标准报文
+                DataPacket packet = User.getLoginPacket(company, userName, password);
+
+                packet.make(new byte[] {
+                        Define.EXTEND_COMMAND_USER_LOGIN,
+                        activityID
+                });
+
+                return client.send(packet); // 发送并退出方法
+            }
+        }
+
+        Log.e(TAG, "揾唔返企业实例对应该的IP 地址??");
+        return false;
+    }
+
+    /**
+     * 处理登陆请求的返回报文
+     * @param packet
+     * @param extend
+     */
+    private void onLoginReply(DataPacket packet, byte[] extend) {
+        User user = new User();
+        final int flag = User.packet2ValidResult(packet, extend, user);
+
+        if (flag == Define.LOGIN_FLAG_SUCCESS) {
+            LoggedInUser = user;
+        }
+
+        if (mLoginActivity != null) {
+            // 在主线程触发事件
+            Handler handler = new Handler(getMainLooper());
+            handler.post(new Runnable(){
+                @Override
+                public void run() {
+                    mLoginActivity.onLoginReply(flag); // 哩个方法内涉及UI 更新
+                }
+            });
+        }
+
+
+    }
+
+    /**
+     * LoginActivity 验证用户登陆
+     * @param user
+     * @param passwordMD5
+     * @return
+     */
+    public boolean verifyUser(String company, String user, String passwordMD5) {
+        return false;
+    }
+
+    /**
+     * SettingsActivity 用户登出
+     * <p>登出选项在设置里边
+     */
+    public void exitUser() {
+
+    }
+
+    /**
+     * LoginActivity 新增用户
+     * 哩个方法对应该Server 的MainApplication 的同名方法.
+     */
+    public void addUser(byte activityID, @NonNull Company company, @NonNull String userName){
+//        DataPacket packet = new DataPacket();
+//
+//        packet.pushItem(company.Id);
+//        packet.pushItem(userName);
+//
+//        packet.make(new byte[] {
+//                Define.EXTEND_COMMAND_USER_REQUEST_JOIN,
+//                activityID
+//        });
+//
+//        mClientSocket.send(packet);
+
+        // 遍历找出对应的 Socket
+        for (ClientSocket client : mTcpSockets) {
+            // 用地址实例作为依据
+            if (client.getSocket().getInetAddress().equals(company.ServerAddress)) {
+                // 生成报文
+                DataPacket packet = new DataPacket();
+                User user = new User();
+                user.Name = userName;
+                user.InCompany = company.Id;
+                User.pushUser2Packet(user, packet);
+
+                packet.make(new byte[] {
+                        Define.EXTEND_COMMAND_USER_REQUEST_JOIN,
+                        activityID
+                });
+
+                client.send(packet); // 发送并退出方法
+                //
+                return;
+            }
+        }
+
+        Log.e(TAG, "揾唔返企业实例对应该的IP 地址??");
+    }
+
+    /**
+     * 处理服务端返回的新用户申请情况报文
+     * @param packet
+     * @param extend
+     */
+    private void onNewUserReply(DataPacket packet, byte[] extend) {
+        if (!packet.moveToFirstItem()) {
+            Log.e(TAG, "报文解释错误");
+            return;
+        }
+
+        final int flag = Hash.byte32ToInt(packet.getCurrentItem().data);
+
+        if (mLoginActivity != null) {
+            // 在主线程触发事件
+            Handler handler = new Handler(getMainLooper());
+            handler.post(new Runnable(){
+                @Override
+                public void run() {
+                    mLoginActivity.onNewUserReply(flag); // 哩个方法内涉及UI 更新
+                }
+            });
+        }
+    }
 }

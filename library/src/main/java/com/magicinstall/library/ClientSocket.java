@@ -7,6 +7,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
 import java.util.HashMap;
+import java.util.UUID;
 
 /**
  * 哩个类主要负责报文的拆包解包处理,
@@ -30,6 +31,14 @@ public abstract class ClientSocket {
     public boolean isConnected(){
         if (mTcpSocket == null) return false;
         return mTcpSocket.isConnected();
+    }
+
+    /** 登陆令牌 */
+    public UUID Token = null;
+
+    @Override
+    public int hashCode() {
+        return mTcpSocket.hashCode();
     }
 
     /**
@@ -80,7 +89,7 @@ public abstract class ClientSocket {
                 } while (mTcpSocket == null);
 
                 Log.v(TAG, "已连接, 服务端IP:" + mTcpSocket.getRemoteSocketAddress().toString());
-                onConnected();
+                onConnected(ClientSocket.this);
 
                 // TODO: 取得RSA 实例
 
@@ -165,14 +174,14 @@ public abstract class ClientSocket {
      * 作为客户端, 与服务端连接成功的事件.
      * <p>哩个事件唔喺主线程执行.
      */
-    public void onConnected(){}
+    public void onConnected(ClientSocket client){}
 
     /**
      * Socket 关闭事件.
      * <p>触发哩个事件嘅时候, 唔系Socket 已经关闭, 只系隐性调用过close 方法.
      * TODO: 目前Socket 类冇办法取得onClose 事件.
      */
-    public void onClose(ClientSocket Client){}
+    public void onClose(ClientSocket client){}
 
     /**
      * 处理收到的报文
@@ -260,6 +269,7 @@ public abstract class ClientSocket {
                 // 解包
                 byte extend[] = new byte[Define.EXTEND_LIMIT_LENGTH];
                 complete_packet.resolve(extend);
+                complete_packet.remoteAddress = mTcpSocket.getInetAddress();
                 // 触发报文组合完成事件
                 DataPacket reply_packet = onReceivedCompletePacket(complete_packet, extend);
                 // 回复
@@ -280,8 +290,8 @@ public abstract class ClientSocket {
      * @return true 发送成功
      */
     public boolean send(DataPacket packet) {
-        if (packet == null || packet.moveToFirstPacket() == null) {
-            Log.w(TAG, "空的发送内容");
+        if (packet == null/* || packet.moveToFirstPacket() == null*/) {
+            Log.w(TAG, "报文是空指针"/*"空的发送内容"*/);
             return false;
         }
         if (mTcpSocket == null || mTcpSocket.isClosed()) {

@@ -2,7 +2,6 @@
     <string name="app_name">订单侠</string>
 
     <!-- Strings related to login -->
-    <string name="error_invalid_password">密码太短</string>
     <string name="login_user_id">用户名</string>
     <string name="login_password">密码</string>
     <string name="title_activity_forgot_password">取回密码</string>
@@ -10,7 +9,7 @@
     <string name="login_forgot_password">不记得密码?</string>
     <string name="title_activity_login">登陆</string>
     <string name="pref_title_user">用户</string>
-    <string name="error_incorrect_password">密码不正确</string>
+    <string name="err_incorrect_password">密码不正确</string>
     <string name="pref_title_user_name">用户名</string>
     <string name="title_activity_settings">设置</string>
     <string name="pref_title_notifications">通知</string>
@@ -19,4 +18,18 @@
     <string name="pref_title_server">服务器</string>
     <string name="login_company">选择企业</string>
     <string name="db_default_company_name">我的企业</string>
+    <string name="text_connecting">等待连接 ...</string>
+    <string name="err_login_user_name_too_short">用户名不能少于2个字</string>
+    <string name="err_login_password_too_short">密码不能少于4个字符</string>
+    <string name="err_login_user_deleted">该职员已离职</string>
+    <string name="login_join_question_title">申请加入</string>
+    <string name="login_sure_you_join">你确定加入 </string>
+    <string name="login_sure_join">加入</string>
+    <string name="login_dont_join">不了</string>
+    <string name="text_login_successful">登陆验证已通过</string>
+    <string name="text_user_join_tips">点击[加入]：向服务端提出申请，耐心等待服务端接受申请，然后再尝试登陆．</string>
+    <string name="text_user_join_request_send">新职员加入申请已发送</string>
+    <string name="login_new_user_reply_title">申请回执</string>
+    <string name="login_new_user_msg_ok">你的申请已提交至服务端, 由于申请需要人工审核, 请稍后再尝试登陆, 或向相关的负责人询问申请情况.</string>
+    <string name="login_new_user_msg_error">抱歉, 你的申请不被接受.</string>
 </resources>

@@ -5,7 +5,7 @@ import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 
-import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 
 /**
@@ -48,26 +48,27 @@ public abstract class TcpQueryActivity extends AppCompatActivity {
     }
 
     /************************************************************************
-     *                             Application                              *
+     *                              Activity                                *
      ************************************************************************/
 
     /**
      * 由Application 调用的刷新全部元素事件.
      * <p>该事件一般不在主线程运行
-     * @param list List 的每一个元素保存每一项的查询结果;
+     * @param collection List 的每一个元素保存每一项的查询结果;
      *             HashMap 的Key 对应每一行的字段名
      */
-    public abstract void onRefresh(ArrayList<HashMap<String, Object>> list);
+    public abstract void onRefresh(Collection<?> collection);
 
     /**
      * 由Application 调用的元素添加事件
      * <p>该事件一般不在主线程运行
-     * @param list List 的每一个元素保存每一项的查询结果;
+     * @param collection List 的每一个元素保存每一项的查询结果;
      *             HashMap 的Key 对应每一行的字段名
      */
-    public abstract void onAdd(ArrayList<HashMap<String, Object>> list) ;
+    public abstract void onAdd(Collection<?> collection) ;
 
     /**
+     * TODO: 取消哩个方法
      * 根据传入的命令, 返回要查询的字段名(或多组字段名).
      * <p>重写该方法时不要调用父类的实现.
      * @param commend 某些命令可能需要的字段不同.

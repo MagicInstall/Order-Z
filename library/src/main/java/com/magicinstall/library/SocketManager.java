@@ -74,11 +74,11 @@ public abstract class SocketManager {
                     // 新建并插入到客户端列表
                     ClientSocket client = new ClientSocket(client_socket, null) {
                         @Override
-                        public void onClose(ClientSocket client_socket) {
+                        public void onClose(ClientSocket client) {
                             Log.i(TAG, "客户端" +
-                                    client_socket.getSocket().getRemoteSocketAddress().toString() +
+                                    client.getSocket().getRemoteSocketAddress().toString() +
                                             "连接已关闭");
-                            mClientList.remove(client_socket);
+                            mClientList.remove(client);
                         }
 
                         /**

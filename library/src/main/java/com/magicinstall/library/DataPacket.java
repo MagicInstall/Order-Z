@@ -4,6 +4,7 @@ import android.util.Log;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -45,6 +46,9 @@ public class DataPacket {
      * 同一个完整包的每个分包, 此标识都是相同的.
      */
     protected static int mPacketID = 0;
+
+    /** 接收到此包时, 将socket 的远程地址赋予该值 */
+    public InetAddress remoteAddress = null;
 
     private int mLimit = SYSTEM_LIMIT_LENGTH; // 默认值
     /**
@@ -108,7 +112,7 @@ public class DataPacket {
      *            传入null 则不加密.
      */
     public void make(byte[] extend, RSA rsa) {
-        if (mItemNodeHead == null) return;
+//        if (mItemNodeHead == null) return;
 
         clearPackets();
 
@@ -173,49 +177,51 @@ public class DataPacket {
         byte this_out[] = null;
         int all_packet_len = 0;
         int packet_cnt = 0;
-        // 以项为循环单位, 一边读一边分包
-        moveToFirstItem();
-        do {
-            try {
-                if (getCurrentItem().data != null) {
-                    output_stream.write(Hash.int2byte32(getCurrentItem().data.length)); // 写入此项的长度
-                    output_stream.write(getCurrentItem().data); // 写入此项的内容
+
+        if (moveToFirstItem()) {
+            // 以项为循环单位, 一边读一边分包
+            do {
+                try {
+                    if (getCurrentItem().data != null) {
+                        output_stream.write(Hash.int2byte32(getCurrentItem().data.length)); // 写入此项的长度
+                        output_stream.write(getCurrentItem().data); // 写入此项的内容
+                    }
+                    // 空的项只写入0长度
+                    else
+                        output_stream.write(new byte[]{0, 0, 0, 0});
+
+                } catch (IOException e) {
+                    Log.e(TAG, "make() 写入数据流错误");
                 }
-                // 空的项只写入0长度
-                else
-                    output_stream.write(new byte[]{0, 0, 0, 0});
 
-            } catch (IOException e) {
-                Log.e(TAG, "make() 写入数据流错误");
-            }
-
-            // 判断够一个包未, 使用循环系因为有可能有某个项的长度跨几个包
-            while (output_stream.size() >= limit) {
-                this_out = output_stream.toByteArray();
+                // 判断够一个包未, 使用循环系因为有可能有某个项的长度跨几个包
+                while (output_stream.size() >= limit) {
+                    this_out = output_stream.toByteArray();
 //                try {
 //                    output_stream.close();
 //                } catch (IOException e) {
 //                    Log.e(TAG, "make() 数据流关闭错误");
 //                }
 
-                // 新建一个包
-                this_packet = pushPacket(new byte[limit]);
-                packet_cnt ++;
-                all_packet_len += limit;
-                // 写入数据
-                System.arraycopy(this_out, 0, this_packet.data, 0, limit);
+                    // 新建一个包
+                    this_packet = pushPacket(new byte[limit]);
+                    packet_cnt++;
+                    all_packet_len += limit;
+                    // 写入数据
+                    System.arraycopy(this_out, 0, this_packet.data, 0, limit);
 
-                // 将后半部写入数据流
-                output_stream = new ByteArrayOutputStream(head_length + this_out.length - limit);
-                try {
-                    output_stream.write(new byte[head_length]); // 先写入数据头占位
-                } catch (IOException e) {
-                    Log.e(TAG, "make() 写入数据流错误");
+                    // 将后半部写入数据流
+                    output_stream = new ByteArrayOutputStream(head_length + this_out.length - limit);
+                    try {
+                        output_stream.write(new byte[head_length]); // 先写入数据头占位
+                    } catch (IOException e) {
+                        Log.e(TAG, "make() 写入数据流错误");
+                    }
+                    output_stream.write(this_out, limit, this_out.length - limit); // 写入后半部
+
                 }
-                output_stream.write(this_out, limit, this_out.length - limit); // 写入后半部
-
-            }
-        } while (moveNextItem() != null);
+            } while (moveNextItem() != null);
+        }
 
         // 写最后一个包
         this_out = output_stream.toByteArray();

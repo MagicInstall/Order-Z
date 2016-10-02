@@ -9,7 +9,12 @@ import android.util.Log;
 import android.view.View;
 import android.widget.ImageView;
 
-public class MainActivity extends ActivityManagerApplication.ManagedActivity {
+import com.magicinstall.library.Define;
+import com.magicinstall.library.TcpQueryActivity;
+
+import java.util.Collection;
+
+public class MainActivity extends TcpQueryActivity /*ActivityManagerApplication.ManagedActivity*/ {
     private static final String TAG = "MainActivity";
 
     private ImageView mSettingButton;
@@ -81,9 +86,9 @@ public class MainActivity extends ActivityManagerApplication.ManagedActivity {
 //        }
 
         // TODO: 哩度判断登陆咗未
-        if (!((MainApplication)getApplicationContext()).isLogined()) {
-            gotoLoginActivity();
-        }
+//        if (!((MainApplication)getApplicationContext()).isLogined()) {
+//            gotoLoginActivity();
+//        }
 
         super.onResume();
     }
@@ -93,6 +98,8 @@ public class MainActivity extends ActivityManagerApplication.ManagedActivity {
         Log.i(TAG, "onDestroy");
         super.onDestroy();
     }
+
+
 
     /**
      * 跳转到登陆页面
@@ -118,5 +125,37 @@ public class MainActivity extends ActivityManagerApplication.ManagedActivity {
         this.startActivity(intent);
         Log.i(TAG, "gotoSettingsActivity");
 //        this.finish();
+    }
+
+
+
+    /************************************************************************
+     *                           TcpQueryActivity                           *
+     ************************************************************************/
+    public static final byte ACTIVITY_ID = Define.MAIN_ACTIVITY_ID;
+
+
+    /**
+     * 由Application 调用的刷新全部元素事件.
+     * <p>该事件一般不在主线程运行
+     *
+     * @param collection List 的每一个元素保存每一项的查询结果;
+     *                   HashMap 的Key 对应每一行的字段名
+     */
+    @Override
+    public void onRefresh(Collection<?> collection) {
+
+    }
+
+    /**
+     * 由Application 调用的元素添加事件
+     * <p>该事件一般不在主线程运行
+     *
+     * @param collection List 的每一个元素保存每一项的查询结果;
+     *                   HashMap 的Key 对应每一行的字段名
+     */
+    @Override
+    public void onAdd(Collection<?> collection) {
+
     }
 }
